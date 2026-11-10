@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# never commit local config, tokens or caches
+config.toml
+*.toml.bak
+.env*
+msal_cache*
+*.db
+*.db-shm
+*.db-wal

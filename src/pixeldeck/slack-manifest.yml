@@ -1,0 +1,29 @@
+display_information:
+  name: PIXELDECK
+  description: Personal terminal Slack client. Acts only as the person who installed it.
+  background_color: "#1b0c45"
+oauth_config:
+  scopes:
+    # User scopes only, no bot: the token can do exactly what you can do, as you, and nothing more.
+    user:
+      - search:read       # find messages that mention you
+      - channels:read     # list channels you're in
+      - groups:read       # list private channels you're in
+      - im:read           # list your DMs
+      - mpim:read         # list your group DMs
+      - channels:history  # read channel messages and threads
+      - groups:history    # read private channel messages and threads
+      - im:history        # read DMs
+      - mpim:history      # read group DMs
+      - users:read        # show names instead of user IDs
+      - chat:write        # send, reply, edit and delete your own messages
+      - reactions:read    # see reactions
+      - reactions:write   # add / remove your reactions
+      - channels:write    # mark channels read
+      - groups:write      # mark private channels read
+      - im:write          # start DMs, mark DMs read
+      - mpim:write        # mark group DMs read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

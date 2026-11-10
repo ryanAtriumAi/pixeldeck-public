@@ -1,0 +1,26 @@
+[project]
+name = "pixeldeck"
+version = "0.2.0"
+description = "An 8-bit terminal dashboard for everything that wants your attention"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Ryan Fontenot", email = "contact@ryanxf.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "httpx>=0.28.1",
+    "keyring>=25.7.0",
+    "msal>=1.39.0",
+    "psutil>=7.2.2",
+    "textual>=8.2.8",
+    "tomlkit>=0.15.2",
+]
+
+[project.scripts]
+pixeldeck = "pixeldeck:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"

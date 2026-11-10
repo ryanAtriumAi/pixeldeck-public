@@ -1,0 +1,77 @@
+# PIXELDECK config. Secrets never go in this file: use `pixeldeck secret <name>`
+# (macOS keychain) or an env var (SLACK_TOKEN, LINEAR_API_KEY, PIXELDECK_<NAME>).
+
+[github]
+# Uses the account `gh auth status` shows as active.
+# Repos whose CI runs feed the CI PIPELINE tile. Empty = repos of your open PRs.
+ci_repos = []
+ci_branch = "main"
+
+[outlook]
+# Microsoft 365 mail + calendar. After enabling, run `pixeldeck login outlook`.
+enabled = false
+# client_id = "<your Entra app registration id>"   # optional override
+# authority = "https://login.microsoftonline.com/<tenant-id>"
+
+[mail]
+# Hidden from the MAIL tile and its unread count, across every mail source.
+# "github.com" hides that domain and its subdomains; "x@y.com" hides one address.
+hide_from = ["github.com"]
+hide_subjects = []   # case-insensitive substrings, e.g. ["[JIRA]"]
+
+# Any IMAP inbox (Gmail/Fastmail/iCloud with an app password). Repeat the block per account.
+# [[imap]]
+# name = "personal"
+# host = "imap.gmail.com"
+# user = "you@example.com"
+# web_url = "https://mail.google.com"      # what Enter opens
+# secret = "imap-personal"                 # then: pixeldeck secret imap-personal
+
+[apple_mail]
+# Read the unified inbox from Mail.app via AppleScript (asks for Automation access once).
+enabled = false
+
+[slack]
+# User token (xoxp-) with search:read. `pixeldeck secret slack`
+# <@ME> is replaced by your Slack user id.
+queries = ["<@ME>", "to:me"]
+
+[linear]
+# Personal API key from Linear > Settings > Security & access. `pixeldeck secret linear`
+
+[system]
+docker = true
+repos = []   # e.g. ["~/code/my-repo"]: branch, dirty files, ahead/behind, worktrees
+
+[releases]
+# Deploy pipeline tile. Versions come from GitHub (no cloud creds): either the newest
+# run of a deploy workflow, or the newest commit that pins `app_image -> <tag>` in a file.
+# repo = "owner/repo"
+# branch = "main"
+# [[releases.env]]
+# name = "TEST"
+# workflow = "deploy-test.yml"
+# health = "https://test.example.com/api/health"
+# [[releases.env]]
+# name = "PROD"
+# pin_file = "infra/prod.tfvars"
+# health = "https://app.example.com/api/health"
+# app_url = "https://app.example.com"
+# stats = true          # drift, deploy cadence and uptime for this env
+
+[spotify]
+enabled = true         # now playing in the SYSTEM strip (needs the Spotify app; p / < > / [ ])
+
+[update]
+auto = false           # true = pull + restart on its own when the git remote has new commits
+check_minutes = 15     # local source edits always hot-reload
+
+[refresh]   # seconds
+github = 120
+mail = 90
+calendar = 300
+slack = 90
+linear = 180
+system = 2
+repos = 30
+releases = 60

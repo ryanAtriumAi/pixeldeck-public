@@ -1,0 +1,20 @@
+# Changelog
+
+## 0.2.0 (2026-11-10)
+
+- **Spotify:** now playing in the SYSTEM strip (pixel-art cover, progress, volume), with `p` play/pause,
+  `<` `>` skip and `[` `]` volume. Uses the Spotify app on your Mac; no account setup.
+- **Review queue:** shows every PR that asks for your review or is assigned to you, in any repo.
+- **Agent:** tile 0 and the AGENT page (`00`) collect briefs, suggestions and tasks from a local agent
+  through `pixeldeck mcp`. Suggestions open the usual confirm screen; nothing is sent on its own.
+- **Ask (`?`):** chat with a local model that searches every connected source.
+- **Linear:** `/` searches every ticket as you type; `f` filters by status and priority.
+- **Agenda:** 5-day calendar, event details, schedule events.
+- **Releases:** latest release on top, deploys in progress pulse, in-app release notes.
+- **Mail:** open attachments on their own (images, PDFs, media, Office via Quick Look).
+- Local-model reply suggestions in your own tone, LLM status and model picker (`l`).
+- Mac-style word and line editing in every text box; quit needs `q q`.
+
+## 0.1.0
+
+First version: GitHub, mail, calendar, Slack, Linear, CI and system tiles; setup wizard; self-update.
