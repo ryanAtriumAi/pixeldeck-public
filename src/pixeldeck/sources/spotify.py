@@ -44,6 +44,9 @@ COMMANDS = {
     "louder": 'tell application "Spotify" to set sound volume to (sound volume + 10)',
     "quieter": 'tell application "Spotify" to set sound volume to (sound volume - 10)',
     "shuffle": 'tell application "Spotify" to set shuffling to not shuffling',
+    "repeat": 'tell application "Spotify" to set repeating to not repeating',
+    "back10": 'tell application "Spotify" to set player position to (player position - 10)',
+    "fwd10": 'tell application "Spotify" to set player position to (player position + 10)',
 }
 
 

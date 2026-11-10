@@ -29,7 +29,8 @@ pixeldeck doctor       # which sources are connected
 
 Keys: `0`-`9` jump to a tile (press the number twice, e.g. `66`, to open its page: the Slack console,
 the AGENT page for `00`, or the item pages for any other tile), arrows move, `Enter`/`o` open in the browser, `c` copy URL,
-`r` re-sync everything, `?` ask (chat across every source), `+` add a task, `p` play/pause Spotify (`<` `>` skip, `[` `]` volume), `s` setup, `u` update now, `ctrl+p` command palette, `q q` quit (a single `q` just asks; `ctrl+q` quits at once).
+`r` re-sync everything, `?` ask (chat across every source), `+` add a task, `p` play/pause Spotify (`<` `>` skip, `[` `]` volume), `n` the now-playing page, `s` setup, `u` update now, `ctrl+p` command palette, `q q` quit (a single `q` just asks; `ctrl+q` quits at once).
+On a page, the footer lists that page's own keys, and `esc` always goes back.
 
 ## Editing text
 
@@ -242,6 +243,12 @@ restores it; `settings.json.pixeldeck-bak` is kept as a backup.
 The SYSTEM strip shows what Spotify is playing: the cover as 8×8 pixel art, the track, artist and
 album, a progress bar, volume and shuffle/repeat. `p` plays or pauses (on a closed Spotify it opens
 the app and plays), `<` / `>` skip back and forward, `[` / `]` change the volume.
+
+`n` opens the now-playing page: the cover as big pixel art, with the record sliding out of its sleeve
+and spinning while the track plays, a row of sprites dancing on the beat and an 8-bit equalizer along
+the bottom. Spotify doesn't share the audio, so the equalizer follows a steady beat rather than the
+song itself. On that page `p` or space plays and pauses, `<` `>` skip, `←` `→` jump 10 seconds,
+`[` `]` change the volume, `s` toggles shuffle, `r` repeat, `o` brings Spotify to the front.
 
 It talks to the Spotify app on this Mac through AppleScript, so there's no Spotify account setup or
 API key. macOS asks once to let your terminal control Spotify (System Settings › Privacy & Security ›

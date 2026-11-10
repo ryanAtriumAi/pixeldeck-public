@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 (2026-11-10)
+
+- **Now playing page (`n`):** big pixel-art cover, a record that slides out and spins, dancing sprites
+  and an 8-bit equalizer. Keys for play/pause, skip, ±10 seconds, volume, shuffle and repeat.
+- **Page footers:** every page shows only its own keys; the dashboard's keys no longer show (or fire)
+  on top of it. `esc` goes back from every page.
+
 ## 0.2.0 (2026-11-10)
 
 - **Spotify:** now playing in the SYSTEM strip (pixel-art cover, progress, volume), with `p` play/pause,

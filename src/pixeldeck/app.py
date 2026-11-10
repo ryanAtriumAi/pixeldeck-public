@@ -786,32 +786,47 @@ class SplashScreen(Screen):
 # ── App ──────────────────────────────────────────────────────────────────────
 
 
+class Dashboard(Screen):
+    """The board itself. Its shortcuts live on this screen, not the app, so a page pushed on top
+    (agent, mail, agenda, settings…) shows only its own keys in the footer, and esc there goes back."""
+
+    BINDINGS = [
+        Binding("q", "app.quit_twice", "Quit (qq)"),
+        Binding("r", "app.refresh", "Refresh"),
+        Binding("o", "app.open", "Open"),
+        Binding("c", "app.copy", "Copy URL"),
+        Binding("s", "app.setup", "Settings"),
+        Binding("u", "app.update", "Update"),
+        Binding("m", "app.slack_console", "Slack"),
+        Binding("l", "app.llm_models", "LLM"),
+        Binding("f", "app.linear_filter", "Filter Linear"),
+        Binding("slash", "app.linear_search", "Search Linear"),
+        Binding("question_mark", "app.ask", "Ask"),
+        Binding("a", "app.agenda", "Agenda"),
+        Binding("plus", "app.add_task", "Task"),
+        Binding("p", "app.spotify('playpause')", "Play"),
+        Binding("n", "app.spotify_page", "Now playing"),
+        *[Binding(str(n), f"app.jump({n})", show=False) for n in range(1, 10)],
+        Binding("0", "app.jump(0)", show=False),
+    ]
+
+
 class PixelDeck(App):
     TITLE = "PIXELDECK"
     CSS = CSS
     HORIZONTAL_BREAKPOINTS = [(0, "-narrow"), (110, "-medium"), (160, "-wide")]
+    # Only the Spotify keys are app-wide (and hidden): they work on any page that doesn't use the key
+    # itself. Everything else is a Dashboard binding.
     BINDINGS = [
-        Binding("q", "quit_twice", "Quit (qq)"),
-        Binding("r", "refresh", "Refresh"),
-        Binding("o", "open", "Open"),
-        Binding("c", "copy", "Copy URL"),
-        Binding("s", "setup", "Settings"),
-        Binding("u", "update", "Update"),
-        Binding("m", "slack_console", "Slack"),
-        Binding("l", "llm_models", "LLM"),
-        Binding("f", "linear_filter", "Filter Linear"),
-        Binding("slash", "linear_search", "Search Linear"),
-        Binding("question_mark", "ask", "Ask"),
-        Binding("a", "agenda", "Agenda"),
-        Binding("plus", "add_task", "Task"),
-        Binding("p", "spotify('playpause')", "Play"),
+        Binding("p", "spotify('playpause')", show=False),
         Binding("greater_than_sign", "spotify('next')", show=False),
         Binding("less_than_sign", "spotify('previous')", show=False),
         Binding("right_square_bracket", "spotify('louder')", show=False),
         Binding("left_square_bracket", "spotify('quieter')", show=False),
-        *[Binding(str(n), f"jump({n})", show=False) for n in range(1, 10)],
-        Binding("0", "jump(0)", show=False),
     ]
+
+    def get_default_screen(self) -> Screen:
+        return Dashboard(id="_default")
 
     # (column, [(key, title, colour, size)]). "fit" tiles hug short action lists,
     # "fill" tiles split whatever height is left in their column.
@@ -1340,6 +1355,14 @@ class PixelDeck(App):
         if np.art_url and (old is None or old.art_url != np.art_url or vitals.spotify_art is None):
             vitals.spotify_art = await self.spotify.art(np.art_url)
         vitals.refresh()
+
+    def action_spotify_page(self) -> None:
+        if not self.spotify:
+            self.notify("Spotify is off or not installed ([spotify] enabled in config.toml)", timeout=4)
+            return
+        from .spotifyui import SpotifyScreen
+
+        self.push_screen(SpotifyScreen(), lambda _=None: self._run("spotify"))
 
     async def action_spotify(self, what: str) -> None:
         if not self.spotify:
