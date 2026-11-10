@@ -5,6 +5,20 @@ GitHub review requests, your open PRs (CI + conflicts + review state), GitHub no
 CI runs, mail (Microsoft 365, IMAP, Apple Mail), your calendar, Slack mentions and DMs,
 Linear issues, plus live CPU/memory/network/battery, Docker and git repo/worktree status.
 
+## Install
+
+Made for macOS (Spotify, Apple Mail and the keychain are Mac-only). Needs Python 3.14 and
+[uv](https://docs.astral.sh/uv/); the GitHub tiles use the [GitHub CLI](https://cli.github.com) (`gh auth login`).
+
+```bash
+git clone https://github.com/ryanAtriumAi/pixeldeck-public.git pixeldeck
+cd pixeldeck
+uv tool install --editable .   # puts `pixeldeck` on PATH
+pixeldeck setup                # connect your sources
+```
+
+Keep the clone: updates come from it (`u` in the app pulls new commits).
+
 ## Run
 
 ```bash
