@@ -179,6 +179,8 @@ class Assist:
                 else (m.get("quantization") or ""),
                 "size_gb": (m.get("size_bytes") or 0) / 1e9,
                 "instances": [i.get("id") for i in m.get("loaded_instances") or [] if i.get("id")],
+                "ctx": min((int((i.get("config") or {}).get("context_length") or 0)
+                            for i in m.get("loaded_instances") or []), default=0),
             })
         return out
 
@@ -200,7 +202,10 @@ class Assist:
         """Load a model; returns seconds taken. Big models can take a while."""
         t = time.perf_counter()
         async with httpx.AsyncClient(timeout=600) as c:
-            r = await c.post(f"{self.api_root}/api/v1/models/load", json={"model": key})
+            body = {"model": key}
+            if ctx := int(self.cfg.get("context") or 0):
+                body["context_length"] = ctx
+            r = await c.post(f"{self.api_root}/api/v1/models/load", json=body)
         if r.status_code >= 400:
             raise RuntimeError(r.json().get("error", {}).get("message", f"HTTP {r.status_code}"))
         return time.perf_counter() - t

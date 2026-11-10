@@ -249,8 +249,12 @@ class AgentScreen(Screen):
         Binding("o", "act('source')", "Open source"),
         Binding("t", "act('tomorrow')", "Tomorrow"),
         Binding("plus", "add_task", "Add task"),
+        Binding("question_mark", "ask_agent", "Ask agent"),
         Binding("ctrl+r", "reload", "Reload"),
     ]
+
+    def action_ask_agent(self) -> None:
+        self.app.action_ask("agent")
 
     def __init__(self) -> None:
         super().__init__()

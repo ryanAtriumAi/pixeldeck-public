@@ -142,6 +142,15 @@ Questions only go to the local server (`assist.allow_remote` is off by default).
 tool use (Qwen 3.x, Ministral 3). The model's context (shown in the header) limits how much it keeps:
 older search results get trimmed first. Loading the model with a bigger context gives longer chats.
 
+**Ask the agent instead.** `ctrl+t` in Ask switches to your agent (Hermes, see below): the question goes
+to `hermes chat`, which answers with its own tools and memory plus PIXELDECK's through `pixeldeck mcp`.
+You see each tool it uses (⚙ …), then the answer; follow-ups continue the same Hermes session until
+`ctrl+n`. Hermes can act, not just read, so each question tells it not to send, post or change anything
+unless you ask it to. Each mode keeps its own chat, `?` reopens the one you used last, `[ask] default =
+"agent"` makes the agent the first choice, and `?` on the AGENT page asks the agent directly. Hermes needs
+its model loaded with at least 64K context: PIXELDECK's model picker (`l`) loads models with 64K
+(`[assist] context`), and reloads one that's loaded with less.
+
 ## Agent (Hermes, optional)
 
 Tile **0, AGENT** (top left) is what your agent left you: the latest **brief**, **suggestions**, and your

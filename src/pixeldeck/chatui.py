@@ -1,4 +1,5 @@
-"""The Ask screen: chat with the local model, which searches every connected source for you."""
+"""The Ask screen: chat with the local model, which searches every connected source for you, or with
+your agent (Hermes), which uses its own tools. ctrl+t switches; each keeps its own conversation."""
 
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from textual.widgets import Footer, Markdown, OptionList, Static
 from textual.widgets.option_list import Option
 
 from . import pixel as px
-from .ask import SOURCE_ICON, AskSession, Turn, link_citations
+from .ask import SOURCE_ICON, Turn, link_citations
 
 ASK_CSS = f"""
 AskScreen {{ background: {px.VOID}; }}
@@ -47,29 +48,44 @@ AskScreen {{ background: {px.VOID}; }}
 #ask-q:focus {{ border: tall {px.HOTPINK}; }}
 """
 
-HELLO = (
+HELLO_MODEL = (
     "Ask anything about your work. The local model searches your dashboard, GitHub, mail, calendar, "
     "Slack and Linear, then answers with links to what it found.\n"
     "e.g.  what needs my attention today? · what did Sam say about the launch plan? · "
     "which PRs touch RBAC? · when am I meeting Dana? · what's on staging vs prod?\n"
     "Enter asks · ↓ sources · click [s3] to open a source · ctrl+n new chat · ctrl+y copy answer · "
-    "esc stops an answer, then closes. Read-only: it never sends or changes anything."
+    "esc stops an answer, then closes. Read-only: it never sends or changes anything.\n"
+    "ctrl+t asks your agent (Hermes) instead."
 )
+
+HELLO_AGENT = (
+    "Ask your agent (Hermes). It answers with its own tools and memory, plus PIXELDECK's through "
+    "pixeldeck mcp (the dashboard, briefs and tasks), and keeps the thread until ctrl+n.\n"
+    "e.g.  what should I focus on today? · summarise yesterday's brief · what's waiting on me in Slack?\n"
+    "Each question tells it not to send, post or change anything unless you ask it to.\n"
+    "Enter asks · ctrl+n new chat · ctrl+y copy answer · esc stops an answer, then closes · "
+    "ctrl+t back to the local model."
+)
+HELLO = {"model": HELLO_MODEL, "agent": HELLO_AGENT}
+PLACEHOLDER = {"model": "ask about your PRs, mail, Slack, tickets, meetings, deploys…",
+               "agent": "ask your agent…"}
 
 
 class AskScreen(Screen[None]):
     CSS = ASK_CSS
     BINDINGS = [
         Binding("escape", "close", "Stop / close"),
+        Binding("ctrl+t", "mode", "Model ⇄ Agent"),
         Binding("ctrl+n", "new", "New chat"),
         Binding("ctrl+y", "copy", "Copy answer"),
         Binding("ctrl+b", "browser", "Source in browser"),
         Binding("down", "to_sources", show=False),
     ]
 
-    def __init__(self, session: AskSession) -> None:
+    def __init__(self, mode: str = "model") -> None:
         super().__init__()
-        self.session = session
+        self.mode = mode if mode in ("model", "agent") else "model"
+        self.session = None  # set on mount: the app keeps one session per mode
         self.busy = False
         self.started = 0.0
         self.stage = ""
@@ -86,25 +102,50 @@ class AskScreen(Screen[None]):
         yield Divider(id="ask-rule")
         yield VerticalScroll(id="ask-log")
         yield OptionList(id="ask-src")
-        yield TextInput(placeholder="ask about your PRs, mail, Slack, tickets, meetings, deploys…", id="ask-q",
-                        select_on_focus=False)
+        yield TextInput(placeholder=PLACEHOLDER[self.mode], id="ask-q", select_on_focus=False)
         yield Footer()
 
     def on_mount(self) -> None:
-        self._head()
-        log = self.query_one("#ask-log", VerticalScroll)
-        if not self.session.turns:
-            log.mount(Static(Text(HELLO, Style(color=px.DIM)), classes="hello"))
-        for t in self.session.turns:
-            self._mount_turn(t)
-        if self.session.turns:
-            self._show_sources(self.session.turns[-1])
-        log.scroll_end(animate=False)
-        self.query_one("#ask-q").focus()
+        self._load_mode()
         self.set_interval(0.15, self._flush)
         self.set_interval(0.5, self._tick)
+
+    def _load_mode(self) -> None:
+        """Show the current mode's conversation (each mode keeps its own)."""
+        self.app.ask_mode = self.mode
+        self.session = self.app.ask_session_for(self.mode)
+        self._head()
+        q = self.query_one("#ask-q")
+        q.placeholder = PLACEHOLDER[self.mode]
+        log = self.query_one("#ask-log", VerticalScroll)
+        log.remove_children()
+        if not self.session.turns:
+            log.mount(Static(Text(HELLO[self.mode], Style(color=px.DIM)), classes="hello"))
+        for t in self.session.turns:
+            self._mount_turn(t)
+        lst = self.query_one("#ask-src", OptionList)
+        lst.clear_options()
+        lst.remove_class("-on")
+        self.shown_turn = None
+        if self.session.turns:
+            self._show_sources(self.session.turns[-1])
+        self.call_after_refresh(log.scroll_end, animate=False)
+        q.focus()
         if not self.session.model:
             self.run_worker(self._prepare(), group="ask-prep")
+
+    def action_mode(self) -> None:
+        if self.busy:
+            self.notify("still answering · esc stops it first", timeout=3)
+            return
+        self.mode = "agent" if self.mode == "model" else "model"
+        self._load_mode()
+        self.refresh_bindings()
+
+    def check_action(self, action: str, parameters: tuple) -> bool | None:
+        if action in ("browser", "to_sources") and self.mode == "agent":
+            return False  # the agent's answers have no PIXELDECK sources list
+        return True
 
     async def _prepare(self) -> None:
         try:
@@ -116,8 +157,19 @@ class AskScreen(Screen[None]):
     def _head(self) -> None:
         s = self.session
         t = Text()
-        t.append(" ✦ ASK ", Style(color=px.VOID, bgcolor=px.HOTPINK, bold=True))
+        if self.mode == "agent":
+            t.append(" ✦ ASK · AGENT ", Style(color=px.VOID, bgcolor=px.CYAN, bold=True))
+            t.append("  Hermes, with its own tools and pixeldeck mcp", Style(color=px.DIM))
+            t.append("   ctrl+t → local model", Style(color=px.DIM))
+            t.append("\n")
+            t.append(s.model or "Hermes", Style(color=px.INK, bold=True))
+            if s.session_id:
+                t.append(f"  session {s.session_id[-8:]}", Style(color=px.DIM))
+            self.query_one("#ask-head", Static).update(t)
+            return
+        t.append(" ✦ ASK · MODEL ", Style(color=px.VOID, bgcolor=px.HOTPINK, bold=True))
         t.append("  local model · read-only", Style(color=px.DIM))
+        t.append("   ctrl+t → agent", Style(color=px.DIM))
         t.append("\n")
         t.append(s.model or "LM Studio", Style(color=px.INK, bold=True))
         t.append(f"  {s.ctx // 1024}K context", Style(color=px.DIM))
@@ -149,6 +201,10 @@ class AskScreen(Screen[None]):
             out.append(line + "\n", Style(color=color))
         if status:
             out.append(status, Style(color=px.YELLOW))
+        elif turn.answer and not turn.error and self.mode == "agent":
+            n = len(turn.trace)
+            what = f"{n} tool step{'s' * (n != 1)}" if n else "answered directly"
+            out.append(f"✔ {turn.secs:.0f}s · {what}", Style(color=px.DIM))
         elif turn.answer and not turn.error:
             n = len(turn.cited) or len(turn.seen)
             what = f"{n} source{'s' * (n != 1)}" if n else "no sources"
@@ -159,7 +215,7 @@ class AskScreen(Screen[None]):
 
     def _err_text(self, turn: Turn) -> Text:
         msg = turn.error or ""
-        if "connect" in msg.lower() or "connection" in msg.lower():
+        if self.mode == "model" and ("connect" in msg.lower() or "connection" in msg.lower()):
             msg = (f"LM Studio isn't answering at {self.app.assist.url}. Start its server (Developer → Start Server), "
                    "then ask again.")
         elif msg == "stopped":
@@ -220,6 +276,7 @@ class AskScreen(Screen[None]):
             self._finish(live, turn)
             raise
         self._finish(live, turn)
+        self._head()  # the agent's session id shows once it has one
 
     def _finish(self, live: dict, turn: Turn) -> None:
         self.busy = False
@@ -254,7 +311,8 @@ class AskScreen(Screen[None]):
         if not self.busy or not self.live:
             return
         secs = time.monotonic() - self.started
-        label = {"thinking": "◷ thinking", "searching": "⌕ searching", "writing": "✎ writing"}.get(self.stage, "◷")
+        searching = "⚙ working" if self.mode == "agent" else "⌕ searching"
+        label = {"thinking": "◷ thinking", "searching": searching, "writing": "✎ writing"}.get(self.stage, "◷")
         self.live["trace"].update(self._trace_text(self.live["turn"], f"{label}… {secs:.0f}s"))
 
     # sources -------------------------------------------------------------------------
@@ -358,17 +416,8 @@ class AskScreen(Screen[None]):
     def action_new(self) -> None:
         if self.busy:
             self.workers.cancel_group(self, "ask")
-        self.app.ask_session = AskSession(self.app)
-        self.session = self.app.ask_session
-        log = self.query_one("#ask-log", VerticalScroll)
-        log.remove_children()
-        log.mount(Static(Text(HELLO, Style(color=px.DIM)), classes="hello"))
-        lst = self.query_one("#ask-src", OptionList)
-        lst.clear_options()
-        lst.remove_class("-on")
-        self.shown_turn = None
-        self.query_one("#ask-q").focus()
-        self.run_worker(self._prepare(), group="ask-prep")
+        self.app.new_ask_session(self.mode)
+        self._load_mode()
 
     def action_close(self) -> None:
         if self.busy:

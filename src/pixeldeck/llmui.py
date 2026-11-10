@@ -109,6 +109,11 @@ class ModelScreen(ModalScreen[bool]):
                     if other["key"] != key and other["instances"]:
                         self._status(f"◷ unloading {other['name']}…", px.YELLOW)
                         await assist.unload(other["key"])
+            want = int(assist.cfg.get("context") or 0)
+            if m["instances"] and want and 0 < m.get("ctx", 0) < want:  # loaded too small for the agent
+                self._status(f"◷ reloading {m['name']} with {want // 1024}K context…", px.YELLOW)
+                await assist.unload(key)
+                m = {**m, "instances": []}
             if not m["instances"]:
                 start = time.monotonic()
                 self.app.llm_loading = (m["name"], start)

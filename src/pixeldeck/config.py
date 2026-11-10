@@ -37,8 +37,10 @@ DEFAULTS: dict[str, Any] = {
     "claude": {"warn_pct": 80},
     "agenda": {"skip_weekends": False},
     "spotify": {"enabled": True},
+    "ask": {"default": "model"},  # what ? opens first: "model" (local, read-only) or "agent" (Hermes)
     "assist": {"enabled": False, "url": "http://localhost:1234/v1", "model": "", "name": "",
-               "tone": "keep it casual, like a quick message to a colleague", "allow_remote": False},
+               "tone": "keep it casual, like a quick message to a colleague", "allow_remote": False,
+               "context": 65536},  # context LM Studio loads models with (Hermes needs at least 64K)
     "releases": {"repo": "", "branch": "main", "env": []},
     "update": {"auto": False, "check_minutes": 15},
     "refresh": {

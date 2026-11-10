@@ -62,6 +62,9 @@ repos = []   # e.g. ["~/code/my-repo"]: branch, dirty files, ahead/behind, workt
 [spotify]
 enabled = true         # now playing in the SYSTEM strip (needs the Spotify app; p / < > / [ ])
 
+[ask]
+default = "model"     # what ? opens with: "model" (local, read-only search) or "agent" (Hermes); ctrl+t switches
+
 [update]
 auto = false           # true = pull + restart on its own when the git remote has new commits
 check_minutes = 15     # local source edits always hot-reload

@@ -6,6 +6,9 @@
   and an 8-bit equalizer. Keys for play/pause, skip, ±10 seconds, volume, shuffle and repeat.
 - **Page footers:** every page shows only its own keys; the dashboard's keys no longer show (or fire)
   on top of it. `esc` goes back from every page.
+- **Ask the agent:** `ctrl+t` in Ask switches between the local model and your agent (Hermes); each keeps
+  its own chat, and `?` on the AGENT page asks the agent. `[ask] default` picks which opens first.
+- The model picker (`l`) loads models with 64K context (`[assist] context`), and reloads one loaded with less.
 
 ## 0.2.0 (2026-11-10)
 

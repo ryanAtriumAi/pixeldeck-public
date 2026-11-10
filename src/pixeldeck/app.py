@@ -1089,14 +1089,27 @@ class PixelDeck(App):
     def refresh_llm(self) -> None:
         self._run("llm")
 
-    def action_ask(self) -> None:
-        """? : chat with the local model, which searches every connected source."""
-        from .ask import AskSession
+    def action_ask(self, mode: str | None = None) -> None:
+        """? : chat with the local model (searches every connected source) or your agent (Hermes).
+        Opens in the mode you used last ([ask] default to start); ctrl+t switches."""
         from .chatui import AskScreen
 
-        if getattr(self, "ask_session", None) is None:
-            self.ask_session = AskSession(self)
-        self.push_screen(AskScreen(self.ask_session))
+        mode = mode or getattr(self, "ask_mode", None) or self.cfg["ask"].get("default", "model")
+        self.push_screen(AskScreen(mode))
+
+    def ask_session_for(self, mode: str):
+        sessions = self.__dict__.setdefault("ask_sessions", {})
+        if mode not in sessions:
+            self.new_ask_session(mode)
+        return sessions[mode]
+
+    def new_ask_session(self, mode: str):
+        from .agentask import AgentSession
+        from .ask import AskSession
+
+        sessions = self.__dict__.setdefault("ask_sessions", {})
+        sessions[mode] = AgentSession(self) if mode == "agent" else AskSession(self)
+        return sessions[mode]
 
     def action_linear_search(self) -> None:
         """/ : search every Linear ticket; reopens with the last search."""
