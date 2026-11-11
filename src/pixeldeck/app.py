@@ -26,6 +26,7 @@ from . import pixel as px
 from .config import get_secret, load_config
 from .sources.base import Feed, NotConfigured
 from .sources.chat import Linear
+from .sources.linearstate import LinearState
 from .sources.slackclient import SlackClient
 from .sources.github import GitHub
 from .sources.mail import Mail, Outlook
@@ -883,6 +884,8 @@ class PixelDeck(App):
                 for c in self.slack.convos.values():
                     c.refreshed = 0.0  # setting changed: unread state must be recomputed
         self.linear = Linear(self.cfg["linear"])
+        self.linear_state = LinearState()
+        self._linear_new: set[str] | None = None  # ids tagged NEW at the last sync (None before the first)
         from .sources.spotify import Spotify, installed
 
         self.spotify = Spotify(self.cfg["spotify"]) if self.cfg["spotify"].get("enabled") and installed() else None
@@ -1069,9 +1072,19 @@ class PixelDeck(App):
         self.push_screen(SlackScreen(self.slack, convo, ts, thread_ts, draft), back)
 
     async def _linear(self) -> None:
-        feed = await self._feed("linear", self.linear.issues())  # title: everything that matches
+        # title: everything that matches; tickets assigned to me lately and not opened yet come first, tagged NEW
+        feed = await self._feed("linear", self.linear.issues(acked=self.linear_state.ack))
         if feed is not None:
             self.query_one(Hud).set_count("linear", feed.active)  # ▶ ACTIVE chip: in progress only
+            new = [it for it in feed.items if it.flash]
+            ids = {it.ref["id"] for it in new}
+            if self._linear_new is not None:
+                arrived = [it for it in new if it.ref["id"] not in self._linear_new]
+                if arrived:
+                    more = f"  (+{len(arrived) - 1} more)" if len(arrived) > 1 else ""
+                    self.notify(f"{arrived[0].title}{more}", title="◆ ASSIGNED TO YOU", timeout=8)
+                    self.bell()
+            self._linear_new = ids
 
     async def _llm(self) -> None:
         vitals = self.query_one(Vitals)
@@ -1428,9 +1441,14 @@ class PixelDeck(App):
                 self.item_viewed(tile.feed.items[index])
 
     def item_viewed(self, item) -> None:
-        """Called when an item is opened (detail page or browser): mail gets acknowledged."""
+        """Called when an item is opened (detail page or browser): mail gets acknowledged, and a
+        Linear ticket loses its NEW tag (wherever it was opened from, the tile or search)."""
         from .sources.mailstate import mail_key
 
+        ref = item.ref or {}
+        if ref.get("kind") == "linear" and ref.get("id"):
+            self._linear_opened(ref["id"])
+            return
         if not mail_key(item) or not self.cfg["mail"].get("ack_on_open", True):
             return
         was_unread = item.unread
@@ -1441,6 +1459,18 @@ class PixelDeck(App):
             tile.feed.count -= 1
             tile._set_title(tile.feed.count)
             self.query_one(Hud).set_count("mail", tile.feed.count)
+
+    def _linear_opened(self, ticket: str) -> None:
+        tile = self.query_one("#linear", Tile)
+        shown = [it for it in (tile.feed.items if tile.feed else []) if (it.ref or {}).get("id") == ticket and it.flash]
+        if not shown:
+            return  # not tagged NEW: nothing to clear
+        self.linear_state.acknowledge(ticket)
+        if self._linear_new is not None:
+            self._linear_new.discard(ticket)
+        for it in shown:
+            it.flash = False
+            tile.acknowledge(it)
 
     def _setup_for(self, key: str) -> None:
         if key == "agenda":

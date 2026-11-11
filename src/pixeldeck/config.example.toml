@@ -38,6 +38,8 @@ queries = ["<@ME>", "to:me"]
 
 [linear]
 # Personal API key from Linear > Settings > Security & access. `pixeldeck secret linear`
+# new_days = 14  # tickets assigned to you this recently get a NEW tag (and show past the
+#                 # state filter) until you open them; 0 turns it off
 
 [system]
 docker = true

@@ -32,7 +32,8 @@ DEFAULTS: dict[str, Any] = {
     "apple_mail": {"enabled": False},
     "slack": {"enabled": True, "queries": ["<@ME>", "to:me"], "hide_apps": True, "starred": [], "dm_days": 7},
     "linear": {"enabled": True, "scope": "assigned", "states": ["started", "unstarted", "triage"],
-               "sort": "status", "limit": 100, "teams": [], "hide_states": [], "priorities": []},
+               "sort": "status", "limit": 100, "teams": [], "hide_states": [], "priorities": [],
+               "new_days": 14},  # assigned to me this recently and not opened yet: NEW tag, always shown
     "system": {"docker": True, "repos": [], "meters": ["cpu", "mem", "net", "bat"]},
     "claude": {"warn_pct": 80},
     "agenda": {"skip_weekends": False},

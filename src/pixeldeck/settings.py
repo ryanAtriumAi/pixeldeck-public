@@ -380,7 +380,7 @@ RESET = {
     "mail": ["mail.hide_from", "mail.hide_subjects", "mail.ack_on_open"],
     "slack": ["slack.hide_apps", "slack.starred", "slack.dm_days", "refresh.slack"],
     "linear": ["linear.scope", "linear.states", "linear.sort", "linear.limit", "linear.teams",
-               "linear.hide_states", "linear.priorities",
+               "linear.hide_states", "linear.priorities", "linear.new_days",
                "linear.include_backlog", "linear.include_triage", "refresh.linear"],
     "claude": ["claude.warn_pct"],
     "releases": ["refresh.releases"],
@@ -736,6 +736,8 @@ class SettingsScreen(Screen):
             ChoiceField("linear.sort", "SORT", list(LINEAR_SORTS.items())),
             Actions(Button("FILTER BY STATUS / PRIORITY…", id="ln-filter")),
             TextField("linear.limit", "SHOW UP TO", "rows in the tile (the title counts all of them)", number=(10, 1000)),
+            TextField("linear.new_days", "NEW FOR (days)", "tickets assigned to you this recently get a NEW tag "
+                      "and show even if the filter hides them, until you open one; 0 = off", number=(0, 60)),
             TagField("linear.teams", "TEAMS", "team keys like ENG; empty = every team (needed for 'whole team')",
                      "ENG", normalize=lambda s: s.strip().upper()),
             TextField("refresh.linear", "REFRESH (s)", "60–3600", number=(60, 3600)),

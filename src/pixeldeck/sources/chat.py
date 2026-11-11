@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -132,6 +132,21 @@ query($id: String!) {
 }
 """
 
+# tickets assigned to me lately, with the history that says when (Linear has no assignedAt field)
+NEWLY_ASSIGNED = """
+query($filter: IssueFilter) {
+  viewer { id }
+  issues(first: 100, filter: $filter, orderBy: updatedAt) {
+    nodes {
+      identifier title url priority updatedAt dueDate
+      state { name type }
+      assignee { name }
+      history(first: 50) { nodes { createdAt toAssigneeId } }
+    }
+  }
+}
+"""
+
 TICKET_ID = re.compile(r"^\s*([A-Za-z][A-Za-z0-9]{1,6})-(\d+)\s*$")
 
 
@@ -220,7 +235,32 @@ class Linear:
             raise NotConfigured("pick team keys (Settings → Linear → TEAMS) to list whole teams")
         return flt
 
-    async def issues(self) -> Feed:
+    async def newly_assigned(self, acked: dict[str, float]) -> list[dict]:
+        """Open tickets assigned to me in the last `new_days` that I haven't opened since, newest
+        first. Each node gets `assignedAt` (epoch seconds)."""
+        days = int(self.cfg.get("new_days", 14) or 0)
+        if days <= 0:
+            return []
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        data = await self._gql(NEWLY_ASSIGNED, {"filter": {
+            "assignee": {"isMe": {"eq": True}},
+            "state": {"type": {"nin": ["completed", "canceled"]}},
+            "updatedAt": {"gte": since.isoformat()},  # assigning a ticket updates it
+        }})
+        me = data["viewer"]["id"]
+        out = []
+        for n in data["issues"]["nodes"]:
+            stamps = [parse_time(h["createdAt"]) for h in n["history"]["nodes"] if h.get("toAssigneeId") == me]
+            at = max((t for t in stamps if t), default=None)
+            if at and at >= since and at.timestamp() > acked.get(n["identifier"], 0):
+                n["assignedAt"] = at.timestamp()
+                out.append(n)
+        out.sort(key=lambda n: n["assignedAt"], reverse=True)
+        return out
+
+    async def issues(self, acked: dict[str, float] | None = None) -> Feed:
+        """The tile's tickets. With `acked` (ticket id -> when it was opened), tickets assigned to me
+        lately and not opened since come first with the NEW tag, even if the filter would hide them."""
         key = get_secret("linear", env="LINEAR_API_KEY")
         if not key:
             raise NotConfigured("connect Linear to see your issues")
@@ -271,7 +311,24 @@ class Linear:
         else:
             nodes.sort(key=lambda n: (STATE_ORDER.get(n["state"]["type"], 9), prio(n), n["updatedAt"][::-1]))
         scope = self.cfg.get("scope", "assigned")
-        items = [issue_item(n, show_assignee=scope != "assigned") for n in nodes[:limit]]
+        fresh: list[dict] = []
+        if acked is not None:
+            try:
+                fresh = await self.newly_assigned(acked)
+            except Exception:  # NEW tags are extra; never lose the tile over them
+                fresh = []
+        fresh_ids = {n["identifier"] for n in fresh}
+        nodes = [n for n in nodes if n["identifier"] not in fresh_ids]
+        items = []
+        for n in fresh:
+            it = issue_item(n, show_assignee=scope != "assigned")
+            it.flash = True
+            it.ref["assigned_at"] = n["assignedAt"]
+            it.meta = it.meta.rsplit(" · ", 1)[0] + " · assigned " + \
+                ago(datetime.fromtimestamp(n["assignedAt"], timezone.utc))
+            items.append(it)
+        items += [issue_item(n, show_assignee=scope != "assigned") for n in nodes[:max(limit - len(items), 0)]]
+        nodes = fresh + nodes
         active = sum(1 for n in nodes if n["state"]["type"] == "started")
         notes = []
         if hidden or keep_prio:
@@ -280,7 +337,7 @@ class Linear:
                 parts.append("hiding " + ", ".join(sorted(h.title() for h in hidden)))
             if keep_prio:
                 parts.append("only " + "/".join(dict(PRIORITY_NAMES)[p] for p in sorted(keep_prio, key=lambda p: p or 9)))
-            notes.append(f"{' · '.join(parts)} ({fetched - len(nodes)} filtered) · f to change")
+            notes.append(f"{' · '.join(parts)} ({max(fetched - len(nodes), 0)} filtered) · f to change")
         if len(nodes) > len(items):
             notes.append(f"showing {len(items)} of {len(nodes)}{'+' if total_more else ''} · raise the limit in Settings")
         return Feed(items=items, count=len(nodes), note=" · ".join(notes) or None, active=active,

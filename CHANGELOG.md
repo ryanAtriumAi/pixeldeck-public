@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 (2026-11-11)
+
+- **Linear NEW tag:** tickets assigned to you in the last 14 days (`[linear] new_days`) that you haven't
+  opened come first in LINEAR QUESTS with the NEW tag, even if the filter hides their state (new tickets
+  often land in Backlog). Opening one clears it; a ticket assigned while PIXELDECK runs pops a toast.
+
 ## 0.3.0 (2026-11-10)
 
 - **Now playing page (`n`):** big pixel-art cover, a record that slides out and spins, dancing sprites

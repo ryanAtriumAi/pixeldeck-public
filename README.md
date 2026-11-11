@@ -111,6 +111,13 @@ Todo…) and priority, multi-select; the tile says what's hidden. Ticket pages r
 Markdown: headings, tables, code, ☐/☑ checklists, ticket references as links, each comment as its own
 block.
 
+Tickets assigned to you in the last two weeks that you haven't opened yet come first with a pulsing
+**NEW** tag (the tile counts them), even when the state or status filter would hide them, as with a new
+ticket landing in Backlog. Opening one (its page, the browser, or from search) clears the tag; being
+assigned it again brings it back. A ticket assigned while PIXELDECK is open also pops a toast.
+Settings → Linear → NEW FOR sets the window (0 turns it off). Nothing changes in Linear: what you've
+opened is kept in `linear-state.json`.
+
 ### Search
 
 `/` searches every Linear ticket with Linear's own search (titles, descriptions, ids), as you
