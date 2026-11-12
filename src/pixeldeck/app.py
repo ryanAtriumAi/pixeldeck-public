@@ -24,7 +24,7 @@ from textual.widgets.option_list import Option
 
 from . import pixel as px
 from .config import get_secret, load_config
-from .sources.base import Feed, NotConfigured
+from .sources.base import Feed, NeedsSettings, NotConfigured
 from .sources.chat import Linear
 from .sources.linearstate import LinearState
 from .sources.slackclient import SlackClient
@@ -303,6 +303,7 @@ class Tile(OptionList):
 
     def set_feed(self, feed: Feed) -> None:
         self.feed = feed
+        self.problem_in_settings = False
         self._build(feed)
         self.updated = time.monotonic()
         self._age()
@@ -406,8 +407,10 @@ class Tile(OptionList):
         new = len(self.flashing)
         self.border_subtitle = f"✦ {new} NEW" if new else ""
 
-    def set_problem(self, message: str, setup: bool) -> None:
+    def set_problem(self, message: str, setup: bool, settings: bool = False) -> None:
+        """setup: Enter fixes it. settings: in Settings (a choice that can't work), not by connecting."""
         self.feed = None
+        self.problem_in_settings = settings
         self._set_title(None)
         self.urls.clear()
         icon, color = ("⚙ SETUP", px.YELLOW) if setup else ("⚠ ERROR", px.RED)
@@ -415,7 +418,7 @@ class Tile(OptionList):
         msg.append(f" {icon} ", Style(color=px.VOID, bgcolor=color, bold=True))
         msg.append(f" {message}", Style(color=px.INK if setup else px.RED))
         if setup:
-            msg.append("  ⏎ connect", Style(color=px.HOTPINK, bold=True))
+            msg.append("  ⏎ settings" if settings else "  ⏎ connect", Style(color=px.HOTPINK, bold=True))
         self.set_options([Option(msg, id=f"{self.key}-setup" if setup else None, disabled=not setup)])
         if not setup:
             self.add_class("error")
@@ -1012,7 +1015,7 @@ class PixelDeck(App):
         try:
             feed = await coro
         except NotConfigured as exc:
-            tile.set_problem(str(exc), setup=True)
+            tile.set_problem(str(exc), setup=True, settings=isinstance(exc, NeedsSettings))
             return None
         except Exception as exc:  # keep the dashboard alive whatever a source does
             tile.set_problem(f"{type(exc).__name__}: {exc}"[:200], setup=False)
@@ -1491,6 +1494,12 @@ class PixelDeck(App):
             tile.acknowledge(it)
 
     def _setup_for(self, key: str) -> None:
+        tile = next(iter(self.query(f"#{key}")), None)
+        if getattr(tile, "problem_in_settings", False):
+            from .settings import SettingsScreen
+
+            self.push_screen(SettingsScreen(key), self._setup_done)  # the key is fine; a setting isn't
+            return
         if key == "agenda":
             self.push_screen(OutlookScreen(), self._setup_done)
         elif key in SERVICES:

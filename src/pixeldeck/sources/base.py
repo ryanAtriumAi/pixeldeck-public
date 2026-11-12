@@ -61,6 +61,10 @@ class NotConfigured(Exception):
     """Raised with a one-line setup hint when a source has no credentials."""
 
 
+class NeedsSettings(NotConfigured):
+    """The credentials are fine but a setting can't work as chosen: Enter opens Settings, not the key form."""
+
+
 def parse_time(value: str | None) -> datetime | None:
     if not value:
         return None

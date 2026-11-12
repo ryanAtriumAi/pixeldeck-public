@@ -104,7 +104,8 @@ deploy_cmd = "scripts/(ship|deploy)-staging"
 
 LINEAR QUESTS lists the issues assigned to you (all of them, paged), in-progress first, then by
 priority; the title counts every match and the ▶ ACTIVE chip counts what's in progress. Settings →
-Linear: which issues (assigned to me / created by me / subscribed / whole team), which states
+Linear: which issues (assigned to me / created by me / subscribed / whole team, which means the teams
+you're on unless you set team keys), which states
 (in progress, todo, triage, backlog), sort (status, priority, updated, due), how many rows to show,
 and team keys. Press **`f`** to filter by status (your workflow's own states: In Progress, In Review,
 Todo…) and priority, multi-select; the tile says what's hidden. Ticket pages render Linear's

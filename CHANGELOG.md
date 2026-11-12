@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.3 (2026-11-12)
+
+- **Linear "whole team"** works without team keys: it lists the teams you're on. Before, it stopped
+  with a setup prompt whose Enter opened the API key form, as if the key were the problem.
+- A tile whose setup problem is a setting, not a missing key, says `⏎ settings` and opens that
+  section of Settings.
+
 ## 0.3.2 (2026-11-12)
 
 - **Mouse keeps working:** PIXELDECK turns mouse reporting back on every 15 seconds and whenever the

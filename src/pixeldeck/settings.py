@@ -738,7 +738,7 @@ class SettingsScreen(Screen):
             TextField("linear.limit", "SHOW UP TO", "rows in the tile (the title counts all of them)", number=(10, 1000)),
             TextField("linear.new_days", "NEW FOR (days)", "tickets assigned to you this recently get a NEW tag "
                       "and show even if the filter hides them, until you open one; 0 = off", number=(0, 60)),
-            TagField("linear.teams", "TEAMS", "team keys like ENG; empty = every team (needed for 'whole team')",
+            TagField("linear.teams", "TEAMS", "team keys like ENG; empty = every team (for 'whole team': the teams you're on)",
                      "ENG", normalize=lambda s: s.strip().upper()),
             TextField("refresh.linear", "REFRESH (s)", "60–3600", number=(60, 3600)),
         ]

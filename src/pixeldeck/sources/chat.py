@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 from ..config import get_secret
-from .base import Feed, Item, NotConfigured, SourceError, ago, parse_time
+from .base import Feed, Item, NeedsSettings, NotConfigured, SourceError, ago, parse_time
 
 
 class Slack:
@@ -225,14 +225,18 @@ class Linear:
             out.append("backlog")
         return out
 
-    def _filter(self) -> dict:
+    async def my_teams(self) -> list[str]:
+        """Keys of the teams I'm on (cached): what 'whole team' means when no team keys are set."""
+        if getattr(self, "_my_teams", None) is None:
+            data = await self._gql("query { viewer { teams { nodes { key } } } }", {})
+            self._my_teams = [t["key"] for t in data["viewer"]["teams"]["nodes"]]
+        return self._my_teams
+
+    def _filter(self, teams: list[str]) -> dict:
         scope = self.cfg.get("scope", "assigned")
         flt: dict = {"state": {"type": {"in": self.states()}}, **SCOPES.get(scope, SCOPES["assigned"])[1]}
-        teams = [t.upper() for t in self.cfg.get("teams") or []]
         if teams:
             flt["team"] = {"key": {"in": teams}}
-        elif scope == "team":
-            raise NotConfigured("pick team keys (Settings → Linear → TEAMS) to list whole teams")
         return flt
 
     async def newly_assigned(self, acked: dict[str, float]) -> list[dict]:
@@ -264,6 +268,12 @@ class Linear:
         key = get_secret("linear", env="LINEAR_API_KEY")
         if not key:
             raise NotConfigured("connect Linear to see your issues")
+        teams = [t.upper() for t in self.cfg.get("teams") or []]
+        if not teams and self.cfg.get("scope", "assigned") == "team":
+            teams = await self.my_teams()
+            if not teams:
+                raise NeedsSettings("you're not on any Linear team; add team keys (Settings → Linear → TEAMS)")
+        flt = self._filter(teams)
         limit = int(self.cfg.get("limit", 100))
         nodes: list[dict] = []
         after = None
@@ -272,7 +282,7 @@ class Linear:
             while True:  # page through everything up to a safety cap, then sort locally
                 resp = await client.post(
                     "https://api.linear.app/graphql",
-                    json={"query": LINEAR_QUERY, "variables": {"filter": self._filter(), "after": after}},
+                    json={"query": LINEAR_QUERY, "variables": {"filter": flt, "after": after}},
                     headers={"Authorization": key, "Content-Type": "application/json"},
                 )
                 data = resp.json()
