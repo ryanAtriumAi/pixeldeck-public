@@ -4,8 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+
+
+# Control characters, ESC above all: Textual passes them straight to the terminal, where a stray
+# reset or mode code in an email or ticket can switch off mouse reporting or garble the screen.
+_CONTROL = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|[\x00-\x08\x0b-\x1f\x7f\x9b]")
+
+
+def clean_text(text: str) -> str:
+    """Drop terminal escape sequences and control characters (keeps tabs and newlines)."""
+    return _CONTROL.sub("", text) if text else text
 
 
 @dataclass
@@ -23,6 +34,10 @@ class Item:
     marks: list[tuple[str, str]] = field(default_factory=list)  # (text in the title, tone) to color
     pulse: bool = False  # the marks breathe green ↔ pink (a deploy in progress)
     rule_after: bool = False  # draw a thin line under this item (groups inside a tile)
+
+    def __post_init__(self) -> None:
+        self.title = clean_text(self.title)
+        self.meta = clean_text(self.meta)
 
 
 @dataclass

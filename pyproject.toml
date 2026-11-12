@@ -1,6 +1,6 @@
 [project]
 name = "pixeldeck"
-version = "0.3.1"
+version = "0.3.2"
 description = "An 8-bit terminal dashboard for everything that wants your attention"
 readme = "README.md"
 license = "MIT"

@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 from .ask import Turn
+from .sources.base import clean_text
 
 if TYPE_CHECKING:
     from .app import PixelDeck
@@ -119,8 +120,9 @@ class AgentSession:
                     continue
                 kind = ev.get("type")
                 if kind == "text":
-                    streamed += ev.get("text", "")
-                    emit("text", ev.get("text", ""))
+                    chunk = clean_text(ev.get("text", ""))  # tool output can carry terminal codes
+                    streamed += chunk
+                    emit("text", chunk)
                 elif kind == "tool_use":
                     emit("reset", "")  # what it wrote before reaching for a tool is preamble
                     streamed = ""
@@ -147,7 +149,7 @@ class AgentSession:
             if result.get("error"):
                 turn.error = _friendly(str(result["error"]))[:400]
             else:
-                turn.answer = (result.get("text") or streamed).strip()
+                turn.answer = clean_text(result.get("text") or streamed).strip()
         except asyncio.CancelledError:
             turn.error = "stopped"
             turn.secs = time.perf_counter() - t0

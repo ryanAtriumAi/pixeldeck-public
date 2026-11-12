@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 (2026-11-12)
+
+- **Mouse keeps working:** PIXELDECK turns mouse reporting back on every 15 seconds and whenever the
+  terminal window regains focus. Before, anything that switched it off mid-run left clicks dead until a restart.
+- Terminal escape codes and control characters are stripped from tile rows and agent answers, so a stray
+  code in an email, ticket or tool output can't reset the terminal.
+
 ## 0.3.1 (2026-11-11)
 
 - **Linear NEW tag:** tickets assigned to you in the last 14 days (`[linear] new_days`) that you haven't

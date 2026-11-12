@@ -962,6 +962,8 @@ class PixelDeck(App):
         self.query_one(Logo).version = self.updater.version
         # self-update: watch our own source every 3s, the git remote every N minutes
         self.set_interval(3, self._watch_local)
+        # keep the mouse working: re-arm mouse reporting now and then, and whenever the window comes back
+        self.set_interval(15, self._rearm_terminal)
         self.set_interval(max(self.cfg["update"]["check_minutes"], 1) * 60, self._check_remote)
         self.set_timer(20, self._check_remote)
         if note := os.environ.pop("PIXELDECK_UPDATED", None):
@@ -970,6 +972,22 @@ class PixelDeck(App):
             self.call_after_refresh(self.action_setup)
         if self.assist.enabled:
             self.run_worker(self.assist.warm(), group="assist-warm")
+
+    def _rearm_terminal(self) -> None:
+        """Turn mouse, focus and paste reporting back on. Textual only does it at startup, so anything
+        that switches them off mid-run (a terminal reset, a stray escape code) left the mouse dead
+        until a restart. Sending them again is harmless when they're already on."""
+        driver = getattr(self, "_driver", None)
+        if driver is None or not hasattr(driver, "_enable_mouse_support"):
+            return  # headless (tests) or a driver without a terminal
+        try:
+            driver.write("\x1b[?1004h\x1b[?2004h")  # focus in/out, bracketed paste
+            driver._enable_mouse_support()  # writes the mouse modes and flushes
+        except Exception:
+            pass
+
+    def on_app_focus(self) -> None:
+        self._rearm_terminal()
 
     # scheduling ---------------------------------------------------------------
 
