@@ -181,9 +181,7 @@ class SlackScreen(Screen):
         else:
             self.query_one("#sl-convos", OptionList).focus()
         # fill in unread state for the rest in the background
-        while any(not c.refreshed for c in self.sc.convos.values()):
-            await self.sc.refresh_some(8)
-            self._fill_convos()
+        await self._resync()
 
     # conversation list --------------------------------------------------------
 
@@ -579,8 +577,14 @@ class SlackScreen(Screen):
                     title="⚙ SLACK APPS", timeout=3)
 
     async def _resync(self) -> None:
+        """Fill in unread state for conversations not synced yet. A failure (offline, rate limit) stops
+        the fill; the 10s poll and r keep the open conversation live, and reopening resumes it."""
         while any(not c.refreshed for c in self.sc.convos.values() if self.sc.visible(c)):
-            await self.sc.refresh_some(8)
+            try:
+                await self.sc.refresh_some(8)
+            except Exception as exc:
+                self.notify(f"{exc}"[:160], title="⚠ SLACK · paused syncing the list", severity="warning", timeout=6)
+                return
             self._fill_convos()
 
     def action_find(self) -> None:

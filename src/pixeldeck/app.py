@@ -24,7 +24,7 @@ from textual.widgets.option_list import Option
 
 from . import pixel as px
 from .config import get_secret, load_config
-from .sources.base import Feed, NeedsSettings, NotConfigured
+from .sources.base import Feed, NeedsSettings, NotConfigured, is_network_error
 from .sources.chat import Linear
 from .sources.linearstate import LinearState
 from .sources.slackclient import SlackClient
@@ -975,6 +975,20 @@ class PixelDeck(App):
             self.call_after_refresh(self.action_setup)
         if self.assist.enabled:
             self.run_worker(self.assist.warm(), group="assist-warm")
+
+    def _handle_exception(self, error: Exception) -> None:
+        """A worker that loses the network (offline, Wi-Fi drop, sleep, DNS) shouldn't take the whole
+        dashboard down: show it and carry on; the next sync retries. Anything else still ends the app,
+        so real bugs stay loud."""
+        inner = getattr(error, "error", error)  # textual wraps worker errors in WorkerFailed
+        if is_network_error(inner):
+            now = time.monotonic()
+            if now - getattr(self, "_last_net_toast", 0) > 30:  # one toast per outage, not one per worker
+                self._last_net_toast = now
+                self.notify(f"{type(inner).__name__}: {inner}"[:160] + " · retrying on the next sync",
+                            title="⚠ NETWORK", severity="warning", timeout=8)
+            return
+        super()._handle_exception(error)
 
     def _rearm_terminal(self) -> None:
         """Turn mouse, focus and paste reporting back on. Textual only does it at startup, so anything

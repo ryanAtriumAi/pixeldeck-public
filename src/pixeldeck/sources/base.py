@@ -57,6 +57,22 @@ class SourceError(Exception):
     pass
 
 
+def is_network_error(exc: BaseException) -> bool:
+    """Offline, DNS failure, dropped or timed-out connection: transient, worth retrying, never fatal."""
+    import socket
+
+    import httpx
+
+    seen = set()
+    while exc is not None and id(exc) not in seen:  # look through `raise ... from` chains
+        seen.add(id(exc))
+        if isinstance(exc, (httpx.TransportError, httpx.TimeoutException, asyncio.TimeoutError,
+                            socket.gaierror, ConnectionError, TimeoutError)):
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 class NotConfigured(Exception):
     """Raised with a one-line setup hint when a source has no credentials."""
 

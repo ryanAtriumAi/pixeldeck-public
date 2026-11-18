@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.4 (2026-11-18)
+
+- **Offline doesn't crash it:** a network error in a background job (Wi-Fi drop, sleep, DNS) shows one
+  `⚠ NETWORK` toast and the next sync retries. Before, it could quit the whole app. Other errors still do.
+- **Slack page:** the background fill of unread state stops when it fails instead of erroring out, and
+  it no longer loops forever on hidden app DMs (it kept calling Slack while the page was open).
+
 ## 0.3.3 (2026-11-12)
 
 - **Linear "whole team"** works without team keys: it lists the teams you're on. Before, it stopped
