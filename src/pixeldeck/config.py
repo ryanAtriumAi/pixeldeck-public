@@ -44,7 +44,10 @@ DEFAULTS: dict[str, Any] = {
                "tone": "keep it casual, like a quick message to a colleague", "allow_remote": False,
                "context": 65536},  # context LM Studio loads models with (Hermes needs at least 64K)
     "releases": {"repo": "", "branch": "main", "env": []},
-    "ui": {"popups": True},  # open emails, tickets and PRs in a popup (f makes it full screen); False = full page
+    "profile": {"name": "", "email": ""},  # asked for at first start (profile.py); empty name = not set yet
+    # popups: open emails, tickets and PRs in a popup (f makes it full screen); False = full page.
+    # theme: one of pixel.THEMES (arcade, phosphor, amber, ocean, frost, mono, daylight)
+    "ui": {"popups": True, "theme": "arcade"},
     "update": {"auto": False, "check_minutes": 15},
     "refresh": {
         "github": 120,

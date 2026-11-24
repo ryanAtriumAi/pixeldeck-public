@@ -47,6 +47,22 @@ as, missing Slack permissions, how much the mail filter hides, whether a release
 Edits save to `~/.config/pixeldeck/config.toml` as you make them, comments kept; `ctrl+z` undoes,
 "reset section" restores defaults, `ctrl+o` opens the file. Tokens show masked and stay in the keychain.
 
+## Profile and themes
+
+The first time PIXELDECK starts without a profile it asks for one: your **name** (shown beside P1 in
+the header, and what reply assist signs drafts with), an optional **email** (its domain tells reply
+assist who is a colleague and who is outside your company), and a **theme**. `ctrl+s` saves, `esc`
+puts it off until the next start. Saving writes `[profile]` to `config.toml` (and `[ui] theme` if you
+picked another one) and changes nothing else, so a setup that already works stays as it is. On a
+brand-new install the connect-your-accounts menu opens next.
+
+Themes: **ARCADE** (the original purple, pink and cyan), **PHOSPHOR** (green CRT), **AMBER**,
+**OCEAN** (navy, teal and coral), **FROST** (soft blue-grey), **MONO** (greyscale) and **DAYLIGHT**
+(light, for bright rooms). Each row in the picker is drawn in that theme's own colours. Change name,
+email or theme any time in Settings (`s`) → Profile; Enter on a theme applies it, and PIXELDECK
+restarts to do so (about a second), because every screen builds its styles from the palette when it
+loads. Or set `[ui] theme = "ocean"` in `config.toml` and restart.
+
 ## Setup
 
 Press `s` (or `Enter` on any tile showing SETUP, or run `pixeldeck setup`). Each source walks you

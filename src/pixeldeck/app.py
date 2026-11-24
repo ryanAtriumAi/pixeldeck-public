@@ -49,7 +49,7 @@ THEME = Theme(
     background=px.VOID,
     surface=px.DEEP,
     panel=px.PANEL,
-    dark=True,
+    dark=px.DARK,
     variables={  # Markdown on detail pages (Linear tickets, PRs, issues)
         "markdown-h1-color": px.HOTPINK, "markdown-h1-text-style": "bold", "markdown-h1-background": "transparent",
         "markdown-h2-color": px.CYAN, "markdown-h2-text-style": "bold", "markdown-h2-background": "transparent",
@@ -122,7 +122,7 @@ OptionList.tile#releases > .option-list--separator {{ color: {px.PURPLE} 70%; }}
 
 OptionList.tile > .option-list--option {{ padding: 0 1; }}
 OptionList.tile > .option-list--option-highlighted {{ background: {px.SHADOW}; }}
-OptionList.tile:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+OptionList.tile:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 OptionList.tile > .option-list--option-hover {{ background: {px.PANEL}; }}
 OptionList.tile > .option-list--option-disabled {{ color: {px.DIM}; }}
 OptionList.tile > .option-list--separator {{ color: {px.SHADOW}; }}
@@ -887,6 +887,12 @@ class PixelDeck(App):
                     self.assist.identity["name"] = user.split("@")[0].split(".")[0].capitalize()
             except Exception:
                 pass
+        # your profile says it outright, so it wins over what the Microsoft account suggests
+        profile = self.cfg.get("profile", {})
+        if str(profile.get("name") or "").strip():
+            self.assist.identity["name"] = profile["name"].split()[0]
+        if "@" in str(profile.get("email") or ""):
+            self.assist.identity["domain"] = profile["email"].rpartition("@")[2].lower()
         old = getattr(self, "releases", None)
         self.releases = Releases(self.cfg["releases"])
         if old:
@@ -925,7 +931,9 @@ class PixelDeck(App):
         self.register_theme(THEME)
         self.theme = "pixeldeck"
         if self.splash:
-            self.push_screen(SplashScreen())
+            self.push_screen(SplashScreen(), lambda _=None: self._ask_profile())
+        else:
+            self.call_after_refresh(self._ask_profile)
         refresh = self.cfg["refresh"]
         self._schedule("github", refresh["github"], self._github)
         self._schedule("notifs", refresh["github"], self._notifs)
@@ -954,10 +962,45 @@ class PixelDeck(App):
         self.set_timer(20, self._check_remote)
         if note := os.environ.pop("PIXELDECK_UPDATED", None):
             self.notify(note, title="★ UPDATED", timeout=8)
+        self._name_player()
         if self.open_setup:
             self.call_after_refresh(self.action_setup)
         if self.assist.enabled:
             self.run_worker(self.assist.warm(), group="assist-warm")
+
+    # profile ---------------------------------------------------------------------
+
+    def _name_player(self) -> None:
+        """The header's P1 label: your profile name, else your GitHub login."""
+        name = str(self.cfg.get("profile", {}).get("name") or "").strip() or self.gh.login
+        if name:
+            self.query_one(Logo).player = name
+
+    def _ask_profile(self) -> None:
+        """First start without a profile: ask who you are and which theme. Nothing else in the
+        config changes, so a setup that already works keeps working as it was."""
+        from .config import CONFIG_PATH
+        from .profile import ProfileScreen, guess, has_profile
+
+        if has_profile() or self.open_setup:
+            return
+        fresh = not CONFIG_PATH.exists()  # a brand-new install: connecting accounts comes next
+
+        def done(result: dict | None) -> None:
+            if result is None:
+                return  # "later": it asks again next start
+            self.cfg = load_config()
+            self._build_sources()
+            self._name_player()
+            restyle = lambda _=None: self._restart("theme changed") if result["theme"] else None
+            if fresh:
+                self.push_screen(SetupMenu(), restyle)
+            else:
+                restyle()
+                if not result["theme"]:
+                    self.notify("saved · change it any time in Settings → Profile", title="★ PROFILE", timeout=5)
+
+        self.push_screen(ProfileScreen(fresh, guess(self.outlook)), done)
 
     def _handle_exception(self, error: Exception) -> None:
         """A worker that loses the network (offline, Wi-Fi drop, sleep, DNS) shouldn't take the whole
@@ -1036,9 +1079,7 @@ class PixelDeck(App):
             self.query_one("#reviews", Tile).set_feed(queue)
             self.query_one("#mine", Tile).set_feed(mine)
             self.query_one(Hud).set_count("reviews", queue.count)
-            if self.gh.login:
-                logo = self.query_one(Logo)
-                logo.player = self.gh.login
+            self._name_player()
         await self._feed("ci", self.gh.ci_runs(), "ci")
 
     def _announce(self, queue: Feed) -> None:

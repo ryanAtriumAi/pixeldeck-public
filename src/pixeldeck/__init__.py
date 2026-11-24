@@ -76,6 +76,14 @@ def main() -> None:
         Outlook(load_config()["outlook"]).login()
         sys.exit(0)
 
+    # the theme first: every screen builds its styles from the palette when it is imported
+    from . import pixel
+
+    try:
+        pixel.apply_theme(load_config()["ui"].get("theme"))
+    except Exception:  # a config that doesn't parse: start in the default look and let the app say so
+        pass
+
     from .app import PixelDeck
     from .updater import restart
 

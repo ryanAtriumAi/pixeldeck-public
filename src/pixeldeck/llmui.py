@@ -23,8 +23,8 @@ ModelScreen > Vertical {{ width: 96; max-width: 95%; height: auto; max-height: 8
                           border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
                           padding: 1 2; }}
 #llm-list {{ height: auto; max-height: 18; background: {px.DEEP}; border: none; margin: 1 0; }}
-#llm-list > .option-list--option-highlighted {{ background: #3a1670; }}
-#llm-list:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+#llm-list > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+#llm-list:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 #llm-free {{ background: {px.DEEP}; border: none; }}
 #llm-status {{ height: auto; margin-top: 1; }}
 """

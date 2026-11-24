@@ -34,16 +34,16 @@ AskScreen {{ background: {px.VOID}; }}
     text-style: bold; margin: 0; }}
 #ask-log MarkdownListItem MarkdownParagraph {{ margin: 0; }}
 #ask-log MarkdownBullet {{ color: {px.HOTPINK}; }}
-#ask-log MarkdownBlock > .code_inline {{ color: #cbb8ff; background: #221142; }}
+#ask-log MarkdownBlock > .code_inline {{ color: {px.INLINE}; background: {px.INLINE_BG}; }}
 #ask-log MarkdownBlock > .strong {{ color: {px.INK}; text-style: bold; }}
-#ask-log MarkdownFence {{ background: #120628; border-left: outer {px.PURPLE}; margin: 1 0; }}
+#ask-log MarkdownFence {{ background: {px.FENCE}; border-left: outer {px.PURPLE}; margin: 1 0; }}
 #ask-log .err {{ height: auto; padding: 0 0 0 2; }}
 #ask-log .hello {{ height: auto; color: {px.DIM}; margin-top: 1; }}
 #ask-src {{ height: auto; max-height: 10; background: {px.DEEP}; border: none; border-top: solid {px.SHADOW};
             border-title-color: {px.CYAN}; border-title-style: bold; padding: 0 1; display: none; }}
 #ask-src.-on {{ display: block; }}
-#ask-src > .option-list--option-highlighted {{ background: #3a1670; }}
-#ask-src:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+#ask-src > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+#ask-src:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 #ask-q {{ background: {px.PANEL}; border: tall {px.PURPLE}; margin: 0 1; }}
 #ask-q:focus {{ border: tall {px.HOTPINK}; }}
 """

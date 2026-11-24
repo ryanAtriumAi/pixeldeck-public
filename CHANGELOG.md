@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 (2026-11-24)
+
+- **Profile:** the first start without one asks for your name, an optional email and a theme. Your name
+  shows beside P1 in the header. It only adds `[profile]` to `config.toml`; an existing setup is left
+  exactly as it was. Edit it in Settings → Profile.
+- **Themes:** ARCADE (the original), PHOSPHOR, AMBER, OCEAN, FROST, MONO and DAYLIGHT (light). Pick one
+  in the profile screen or Settings → Profile (`[ui] theme`); PIXELDECK restarts to apply it.
+
 ## 0.4.0 (2026-11-24)
 
 - **Popups:** `Enter` on an email, ticket, PR, CI run, release or Slack row opens it in a popup over

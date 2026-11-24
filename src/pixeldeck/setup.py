@@ -41,7 +41,7 @@ SetupMenu, FormScreen, OutlookScreen {{ align: center middle; background: {px.VO
     border-title-color: {px.VOID}; border-title-style: bold; padding: 1 2;
 }}
 .box OptionList {{ height: auto; max-height: 16; background: {px.DEEP}; border: none; }}
-.box OptionList > .option-list--option-highlighted {{ background: #4a1a7a; }}
+.box OptionList > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 .steps {{ margin-bottom: 1; }}
 .field-label {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
 .box Input {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}

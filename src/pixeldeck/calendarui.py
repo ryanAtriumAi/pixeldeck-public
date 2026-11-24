@@ -142,8 +142,8 @@ AgendaScreen {{ background: {px.VOID}; }}
 .cal-day.-today > Label {{ background: {px.HOTPINK}; color: {px.VOID}; }}
 .cal-day OptionList {{ height: 1fr; background: {px.DEEP}; border: tall {px.SHADOW}; scrollbar-size-vertical: 1; }}
 .cal-day OptionList:focus {{ border: tall {px.HOTPINK}; }}
-.cal-day OptionList > .option-list--option-highlighted {{ background: #3a1670; }}
-.cal-day OptionList:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+.cal-day OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+.cal-day OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 #cal-bottom {{ height: 2fr; margin: 1 1 0 1; border: panel {px.CYAN}; border-title-color: {px.VOID};
                border-title-style: bold; background: {px.DEEP}; }}
 #cal-detail {{ height: 1fr; padding: 0 1; scrollbar-size-vertical: 1; }}

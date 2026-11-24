@@ -762,11 +762,11 @@ DetailScreen.-popup #back, DetailScreen.-popup #copy {{ display: none; }}  /* es
 #d-body MarkdownH1, #d-body MarkdownH2, #d-body MarkdownH3 {{ color: {px.HOTPINK}; background: transparent; text-style: bold; }}
 #d-body MarkdownFence {{ background: {px.PANEL}; }}
 #d-body MarkdownBlockQuote {{ border-left: outer {px.PURPLE}; background: {px.PANEL}; }}
-#d-body MarkdownBlock > .code_inline {{ color: #cbb8ff; background: #221142; }}
+#d-body MarkdownBlock > .code_inline {{ color: {px.INLINE}; background: {px.INLINE_BG}; }}
 #d-body MarkdownBlock > .strong {{ color: {px.INK}; text-style: bold; }}
 #d-body MarkdownBlock > .em {{ color: {px.INK}; text-style: italic; }}
 #d-body MarkdownBlock > .s {{ color: {px.DIM}; text-style: strike; }}
-#d-body MarkdownFence {{ background: #120628; border-left: outer {px.PURPLE}; margin: 1 0; }}
+#d-body MarkdownFence {{ background: {px.FENCE}; border-left: outer {px.PURPLE}; margin: 1 0; }}
 #d-body MarkdownTH {{ color: {px.CYAN}; text-style: bold; }}
 #d-body MarkdownTable {{ margin: 1 0; }}
 #d-body MarkdownHorizontalRule {{ color: {px.SHADOW}; }}
@@ -777,7 +777,7 @@ DetailScreen.-popup #back, DetailScreen.-popup #copy {{ display: none; }}  /* es
 #d-toc {{ width: 34; display: none; background: {px.DEEP}; border-left: tall {px.SHADOW}; border-title-color: {px.CYAN};
           border-title-style: bold; padding: 0 1; scrollbar-size-vertical: 1; }}
 #d-toc.-on {{ display: block; }}
-#d-toc > .option-list--option-highlighted {{ background: #3a1670; }}
+#d-toc > .option-list--option-highlighted {{ background: {px.SELECT}; }}
 #d-actions {{ height: 3; background: {px.DEEP}; padding: 0 1; }}
 #d-actions Button {{ margin-right: 1; min-width: 12; height: 3; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
 #d-actions Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
@@ -1157,8 +1157,8 @@ class AttachmentPicker(ModalScreen[None]):
                                    border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
                                    padding: 1 2; }}
     AttachmentPicker OptionList {{ height: auto; max-height: 20; background: {px.DEEP}; border: none; margin-top: 1; }}
-    AttachmentPicker OptionList > .option-list--option-highlighted {{ background: #3a1670; }}
-    AttachmentPicker OptionList:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+    AttachmentPicker OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+    AttachmentPicker OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
     """
     BINDINGS = [Binding("escape,q,a", "close", "Close"), Binding("o", "in_app", "Open in its app"),
                 Binding("f", "finder", "Show in Finder")]

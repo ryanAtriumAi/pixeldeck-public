@@ -52,8 +52,8 @@ SlackScreen.-popup #sl-left {{ display: none; }}
 #sl-compose:focus {{ border: tall {px.HOTPINK}; }}
 #sl-compose.-edit {{ border: tall {px.YELLOW}; }}
 #sl-compose > .input--suggestion {{ color: {px.HOTPINK} 55%; }}
-SlackScreen OptionList > .option-list--option-highlighted {{ background: #3a1670; }}
-SlackScreen OptionList:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+SlackScreen OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+SlackScreen OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 SlackScreen OptionList > .option-list--option {{ padding: 0 1; }}
 AskScreen {{ align: center middle; background: {px.VOID} 60%; }}
 AskScreen > Vertical {{ width: 70; height: auto; max-height: 80%; background: {px.DEEP}; border: panel {px.HOTPINK};
@@ -341,7 +341,7 @@ class SlackScreen(ModalScreen):
         t.append("\n")
         body = self.sc.render_text(m.text)
         if self.sc.mentions_me(m.text):
-            t.append(body, Style(color=px.INK, bgcolor="#3a1050"))
+            t.append(body, Style(color=px.INK, bgcolor=px.SELECT))
         else:
             t.append(body, Style(color=px.DIM if app else px.INK))
         for f in m.files:

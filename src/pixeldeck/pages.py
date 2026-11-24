@@ -153,7 +153,7 @@ SectionScreen {{ background: {px.VOID}; }}
 #pg-list:focus {{ border: panel {px.HOTPINK}; }}
 #pg-list > .option-list--option {{ padding: 0 1; }}
 #pg-list > .option-list--option-highlighted {{ background: {px.SHADOW}; }}
-#pg-list:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+#pg-list:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 #pg-list > .option-list--option-hover {{ background: {px.PANEL}; }}
 #pg-list > .option-list--separator {{ color: {px.SHADOW}; }}
 #pg-side {{ width: 48; height: 1fr; margin-left: 1; background: {px.DEEP}; border: panel {px.CYAN};

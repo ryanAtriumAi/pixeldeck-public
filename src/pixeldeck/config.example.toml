@@ -22,6 +22,12 @@ hide_subjects = []   # case-insensitive substrings, e.g. ["[JIRA]"]
 
 [ui]
 # popups = true      # Enter opens emails, tickets and PRs in a popup (f = full screen); false = always the full page
+# theme = "arcade"   # arcade | phosphor | amber | ocean | frost | mono | daylight (Settings → Profile)
+
+# PIXELDECK asks for this the first time it starts and writes it here; change it in Settings → Profile.
+# [profile]
+# name = "Your Name"
+# email = "you@company.com"   # optional
 
 # Any IMAP inbox (Gmail/Fastmail/iCloud with an app password). Repeat the block per account.
 # [[imap]]

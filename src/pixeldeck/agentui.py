@@ -226,7 +226,7 @@ AgentScreen {{ background: {px.VOID}; }}
 #ag-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
 #ag-body {{ height: 1fr; }}
 #ag-list {{ width: 52; height: 1fr; background: {px.DEEP}; border: none; border-right: tall {px.PURPLE}; padding: 0 1; }}
-#ag-list > .option-list--option-highlighted {{ background: #3a1670; }}
+#ag-list > .option-list--option-highlighted {{ background: {px.SELECT}; }}
 #ag-right {{ width: 1fr; height: 1fr; }}
 #ag-detail {{ height: 1fr; padding: 1 2; background: {px.VOID}; scrollbar-color: {px.PURPLE}; scrollbar-size-vertical: 1; }}
 #ag-detail .draft {{ background: {px.PANEL}; color: {px.INK}; padding: 1 2; margin-top: 1; max-width: 110; }}

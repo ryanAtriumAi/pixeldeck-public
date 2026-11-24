@@ -119,8 +119,8 @@ LinearSearch .toggles {{ height: auto; margin-top: 1; }}
 LinearSearch Checkbox {{ background: {px.DEEP}; border: none; margin-right: 2; }}
 LinearSearch #ls-status {{ height: 1; margin: 1 0 0 1; }}
 LinearSearch #ls-results {{ height: 1fr; background: {px.DEEP}; border: none; margin-top: 1; }}
-LinearSearch #ls-results > .option-list--option-highlighted {{ background: #3a1670; }}
-LinearSearch #ls-results:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+LinearSearch #ls-results > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+LinearSearch #ls-results:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 LinearSearch #ls-help {{ height: 1; }}
 """
 

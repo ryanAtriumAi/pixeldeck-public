@@ -45,8 +45,8 @@ SettingsScreen {{ background: {px.VOID}; }}
 #st-body {{ height: 1fr; }}
 #st-nav {{ width: 34; background: {px.DEEP}; border-right: tall {px.PURPLE}; }}
 #st-nav OptionList {{ height: 1fr; background: {px.DEEP}; border: none; }}
-#st-nav OptionList > .option-list--option-highlighted {{ background: #3a1670; }}
-#st-nav OptionList:focus > .option-list--option-highlighted {{ background: #4a1a7a; }}
+#st-nav OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+#st-nav OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
 #st-form {{ width: 1fr; padding: 1 2; background: {px.VOID}; scrollbar-size-vertical: 1; scrollbar-color: {px.PURPLE}; }}
 #st-side {{ width: 40; padding: 1 2; background: {px.DEEP}; border-left: tall {px.SHADOW}; }}
 .st-title {{ color: {px.HOTPINK}; text-style: bold; margin-bottom: 1; }}
@@ -244,6 +244,24 @@ class ChoiceField(Field):
             self.save(e.pressed.name)
 
 
+class ThemeField(Field):
+    """The theme list (each row drawn in its own colours). Enter applies one: PIXELDECK restarts,
+    because every screen builds its styles from the palette when it loads."""
+
+    def control(self) -> ComposeResult:
+        from .profile import ThemeList
+
+        yield ThemeList(px.ACTIVE)
+
+    def on_option_list_option_selected(self, e) -> None:
+        e.stop()
+        key = e.option.id
+        if not key or key == px.ACTIVE:
+            return
+        self.save(key)
+        self.app._restart(f"theme: {px.THEMES[key]['label']}")
+
+
 class ChecksField(Field):
     """Pick from a fixed set; all ticked saves [] (= everything)."""
 
@@ -367,7 +385,7 @@ class EnvScreen(ModalScreen[dict | None]):
 # ── the screen ───────────────────────────────────────────────────────────────
 
 SECTIONS = [
-    ("github", "GitHub"), ("outlook", "Microsoft 365"), ("mail", "Mail filters"), ("imap", "IMAP inboxes"),
+    ("profile", "Profile"), ("github", "GitHub"), ("outlook", "Microsoft 365"), ("mail", "Mail filters"), ("imap", "IMAP inboxes"),
     ("apple_mail", "Apple Mail"), ("slack", "Slack"), ("linear", "Linear"), ("claude", "Claude"),
     ("releases", "Releases"), ("system", "System"), ("assist", "Reply assist"),
 ]
@@ -390,8 +408,8 @@ RESET = {
 
 
 class SettingsScreen(Screen):
-    CSS = SETTINGS_CSS + """
-    .field-label { color: #4cc9f0; text-style: bold; margin-top: 1; }
+    CSS = SETTINGS_CSS + f"""
+    .field-label {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
     """
     BINDINGS = [
         Binding("escape", "back", "Back"),
@@ -434,7 +452,10 @@ class SettingsScreen(Screen):
         keep = lst.highlighted
         opts: list[Option] = [Option(_txt("CONNECTIONS", px.CYAN, True), disabled=True)]
         for key, name in SECTIONS:
-            if key == "mail":
+            if key == "profile":
+                who = str(get_value("profile.name") or "").strip()
+                on_, note = bool(who), f"{who or 'not set'} · {px.THEMES[px.ACTIVE]['label'].lower()}"
+            elif key == "mail":
                 on_, note = True, f"{len(get_value('mail.hide_from') or [])} hidden senders"
             elif key == "system":
                 on_, note = True, f"{len(get_value('system.repos') or [])} repos"
@@ -558,6 +579,18 @@ class SettingsScreen(Screen):
             self.secrets_changed()
 
     # ── sections ─────────────────────────────────────────────────────────────
+
+    def _form_profile(self) -> list[Widget]:
+        return [
+            Sub("YOU"),
+            TextField("profile.name", "NAME", "shown in the header; reply assist signs with your first name",
+                      "what PIXELDECK calls you"),
+            TextField("profile.email", "EMAIL", "optional: its domain tells reply assist who is a colleague and who "
+                                                "is outside your company", "you@company.com",
+                      check=lambda v: None if not v or ("@" in v and " " not in v) else "that isn't an email address"),
+            Sub("LOOK"),
+            ThemeField("ui.theme", "THEME", "↑ ↓ to look, Enter to use one (PIXELDECK restarts, about a second)"),
+        ]
 
     def _form_github(self) -> list[Widget]:
         mon, inbox = len(get_value("github.repos") or []), len(get_value("github.inbox_repos") or [])
@@ -1076,6 +1109,12 @@ class SettingsScreen(Screen):
             elif key in ("imap", "apple_mail"):
                 ok, note = status(key)
                 side.append_text(_ok(note) if ok else _bad(note))
+            elif key == "profile":
+                who = str(get_value("profile.name") or "").strip()
+                side.append_text(_ok(f"hello, {who}") if who else _bad("no name yet"))
+                side.append(f"\n\ntheme: {px.THEMES[px.ACTIVE]['label']}", Style(color=px.INK))
+                side.append("\n\nYour profile lives in config.toml on this Mac and goes nowhere else.",
+                            Style(color=px.DIM))
         except Exception as exc:
             side.append_text(_bad(str(exc)[:200]))
         if self.section == key:
