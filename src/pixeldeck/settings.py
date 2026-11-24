@@ -377,14 +377,14 @@ RESET = {
     "github": ["github.repos", "github.inbox_repos", "github.ci_repos", "github.ci_branch", "github.inbox_reasons",
                "refresh.github"],
     "outlook": ["outlook.client_id", "outlook.authority", "refresh.mail", "refresh.calendar"],
-    "mail": ["mail.hide_from", "mail.hide_subjects", "mail.ack_on_open"],
+    "mail": ["mail.hide_from", "mail.hide_subjects", "mail.ack_on_open", "mail.mark_read"],
     "slack": ["slack.hide_apps", "slack.starred", "slack.dm_days", "refresh.slack"],
     "linear": ["linear.scope", "linear.states", "linear.sort", "linear.limit", "linear.teams",
                "linear.hide_states", "linear.priorities", "linear.new_days",
                "linear.include_backlog", "linear.include_triage", "refresh.linear"],
     "claude": ["claude.warn_pct"],
     "releases": ["refresh.releases"],
-    "system": ["system.docker", "system.meters", "refresh.repos"],
+    "system": ["system.docker", "system.meters", "refresh.repos", "ui.popups"],
     "assist": ["assist.url", "assist.model", "assist.tone", "assist.name", "assist.domain"],
 }
 
@@ -617,6 +617,8 @@ class SettingsScreen(Screen):
             TagField("mail.hide_subjects", "SUBJECTS", "case-insensitive text, e.g. [JIRA]", "text in subject"),
             Sub("READING"),
             ToggleField("mail.ack_on_open", "OPEN = ACKNOWLEDGED", "opening an email mutes it and drops it from unread"),
+            ToggleField("mail.mark_read", "MARK READ IN OUTLOOK",
+                        "opening Microsoft 365 mail marks it read in the mailbox too (asks for Mail.ReadWrite once)"),
         ]
 
     def _form_imap(self) -> list[Widget]:
@@ -867,6 +869,9 @@ class SettingsScreen(Screen):
             TagField("system.repos", "REPOS", "branch, changed files, ahead/behind and worktrees",
                      "~/path/to/repo", check=_git_path),
             TextField("refresh.repos", "REFRESH (s)", "10–600", number=(10, 600)),
+            Sub("OPENING THINGS"),
+            ToggleField("ui.popups", "POPUPS", "emails, tickets and PRs open in a popup over what you were looking at "
+                                               "(f makes it full screen); off = always the full page"),
         ]
 
     def _form_assist(self) -> list[Widget]:

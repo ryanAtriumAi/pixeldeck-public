@@ -175,6 +175,41 @@ class Outlook:
                 msg = resp.text
             raise SourceError(f"Graph {resp.status_code}: {msg[:160]}")
 
+    async def _change(self, method: str, path: str, body: dict) -> dict:
+        """A change to the mailbox. Needs Mail.ReadWrite, asked for the first time you change mail."""
+        token = await asyncio.to_thread(self.token_for, ["Mail.ReadWrite"])
+        if not token:
+            raise NeedsConsent("Mail.ReadWrite")
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.request(method, f"{GRAPH}{path}", json=body,
+                                        headers={"Authorization": f"Bearer {token}"})
+        if resp.status_code >= 400:
+            try:
+                err = resp.json().get("error", {})
+            except ValueError:
+                err = {"message": resp.text}
+            if resp.status_code == 403 and err.get("code") == "ErrorAccessDenied":
+                raise NeedsConsent("Mail.ReadWrite")
+            raise SourceError(f"Graph {resp.status_code}: {(err.get('message') or '')[:160]}")
+        try:
+            return resp.json()
+        except ValueError:
+            return {}
+
+    async def mark_read(self, message_id: str, read: bool = True) -> None:
+        """Set the read flag in the mailbox itself, so Outlook everywhere agrees."""
+        await self._change("PATCH", f"/me/messages/{message_id}", {"isRead": read})
+
+    async def trash(self, message_id: str) -> str:
+        """Move a message to Deleted Items (recoverable, like Delete in Outlook). Returns its new id:
+        a moved message gets one, and `restore` needs it."""
+        return (await self._change("POST", f"/me/messages/{message_id}/move",
+                                   {"destinationId": "deleteditems"})).get("id", "")
+
+    async def restore(self, message_id: str) -> str:
+        """Undo `trash`: back to the inbox. Returns the id it has there."""
+        return (await self._change("POST", f"/me/messages/{message_id}/move", {"destinationId": "inbox"})).get("id", "")
+
     def _token(self) -> str:
         app = self._msal()
         accounts = app.get_accounts()
@@ -216,9 +251,9 @@ class Outlook:
             self._get(
                 "/me/mailFolders/inbox/messages",
                 {
-                    "$top": "150",
+                    "$top": str(min(max(150, limit * 3), 500)),  # deep enough to fill `limit` after filtering
                     "$orderby": "receivedDateTime desc",
-                    "$select": "subject,from,receivedDateTime,isRead,webLink,importance,hasAttachments",
+                    "$select": "subject,from,receivedDateTime,isRead,webLink,importance,hasAttachments,bodyPreview",
                 },
             ),
         )
@@ -242,7 +277,10 @@ class Outlook:
                     title=(m.get("subject") or "(no subject)") + flags,
                     meta=f"{sender.get('name') or sender.get('address', '?')} · {ago(when)}",
                     url=m.get("webLink"),
-                    ref={"kind": "graph_mail", "id": m["id"]},
+                    # server_unread: unread in the mailbox itself (item.unread also drops when opened here)
+                    ref={"kind": "graph_mail", "id": m["id"], "server_unread": not m["isRead"],
+                         "important": m.get("importance") == "high", "files": bool(m.get("hasAttachments")),
+                         "preview": " ".join((m.get("bodyPreview") or "").split())},
                     icon="✉" if not m["isRead"] else "·",
                     tone="accent" if not m["isRead"] else "muted",
                     unread=not m["isRead"],
@@ -474,11 +512,17 @@ class Mail:
     def configured(self) -> bool:
         return bool(self.outlook or self.cfg.get("imap") or self.cfg["apple_mail"].get("enabled"))
 
-    async def inbox(self) -> Feed:
+    @staticmethod
+    def can_change(item: Item) -> bool:
+        """Marking read and deleting work for Microsoft 365 mail (IMAP and Apple Mail are read-only here)."""
+        return (item.ref or {}).get("kind") == "graph_mail"
+
+    async def inbox(self, limit: int = 30) -> Feed:
+        """The newest `limit` emails across every connected account (the tile shows 30, the Mail page more)."""
         jobs = []
         flt = self.filter
         if self.outlook:
-            jobs.append(self.outlook.inbox(flt))
+            jobs.append(self.outlook.inbox(flt, limit))
         jobs += [imap_inbox(a, flt) for a in self.cfg.get("imap", [])]
         if self.cfg["apple_mail"].get("enabled"):
             jobs.append(apple_mail_inbox(flt))
@@ -512,7 +556,7 @@ class Mail:
             if feed.items and dups >= len(feed.items) / 2:
                 mirror_count += feed.count or 0
         items.sort(key=lambda i: i.when or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-        items = items[:30]
+        items = items[:limit]
         unread_before = sum(i.unread for i in items)
         arrived = self.state.apply(items)
         acked_unread = unread_before - sum(i.unread for i in items)  # opened here, still unread on the server

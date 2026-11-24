@@ -27,8 +27,8 @@ pixeldeck --no-splash
 pixeldeck doctor       # which sources are connected
 ```
 
-Keys: `0`-`9` jump to a tile (press the number twice, e.g. `66`, to open its page: the Slack console,
-the AGENT page for `00`, or the item pages for any other tile), arrows move, `Enter`/`o` open in the browser, `c` copy URL,
+Keys: `0`-`9` jump to a tile (press the number twice, e.g. `88`, to open that tile's page: see
+[Pages and popups](#pages-and-popups)), arrows move, `Enter` opens the item in a popup, `o` opens it in the browser, `c` copy URL,
 `r` re-sync everything, `?` ask (chat across every source), `+` add a task, `p` play/pause Spotify (`<` `>` skip, `[` `]` volume), `n` the now-playing page, `s` setup, `u` update now, `ctrl+p` command palette, `q q` quit (a single `q` just asks; `ctrl+q` quits at once).
 On a page, the footer lists that page's own keys, and `esc` always goes back.
 
@@ -53,14 +53,69 @@ Press `s` (or `Enter` on any tile showing SETUP, or run `pixeldeck setup`). Each
 through getting its key, tests it against the real API, then stores it in the macOS keychain.
 Microsoft 365 signs in with a device code without leaving the terminal.
 
+## Pages and popups
+
+**Popups.** `Enter` on any row opens it in a popup over what you were looking at: an email, a ticket,
+a PR, a CI run, a release, a Slack conversation. `esc` (or a click outside it) closes it, `n` / `p`
+step to the next and previous row, `o` opens it in the browser, and `f` makes it fill the screen
+(`ctrl+l` in a Slack popup, which brings the conversation list back). Settings → System → POPUPS
+off (`[ui] popups = false`) opens the full page every time instead.
+
+**Pages.** Pressing a tile's number twice opens that tile's page. Each page starts with a strip of
+cards (the numbers that matter for that section) and lists whatever the selected card counts:
+`←` / `→`, the card's number, or a click picks a card. `Enter` opens a row in a popup, `/` filters
+the list as you type, `o` opens the row in the browser, `ctrl+r` reloads, `esc` goes back. A panel
+on the right charts the section. The footer lists each page's own keys.
+
+| Press | Page | Cards |
+| --- | --- | --- |
+| `11` `22` `33` | GITHUB | reviews waiting on you, your open PRs, inbox, PRs you opened / merged / reviewed |
+| `44` | RELEASES | one per environment, latest release, drift, releases |
+| `55` | MAIL | inbox, unread, new since you looked, today, important, with files |
+| `66` | Slack console | (conversations and messages, see [Slack](#slack)) |
+| `77` | Agenda | (day columns, see [Agenda](#agenda)) |
+| `88` | LINEAR | outstanding by priority, new, assigned, created, closed, backlog |
+| `99` | CI | failing, running, recent runs, pass rate, one per repo |
+| `00` | AGENT | (suggestions and tasks, see [Agent](#agent-hermes-optional)) |
+
+What each page is for:
+
+- **GITHUB (`11`, `22`, `33`: it opens on the card for the tile you came from).** REVIEWS lists the
+  PRs waiting on you, longest wait first. MY PRS puts the ones that need you first (CI failing, a
+  conflict, changes requested), then approved, waiting and drafts. INBOX groups notifications into
+  for you, participating and watching; `e` marks the highlighted one read on GitHub. OPENED, MERGED
+  and REVIEWED count your PRs over 7, 30 or 90 days (`t`). The panel charts the health of your open
+  PRs, how long reviews have waited, the inbox by reason, and opened against merged for eight weeks.
+- **RELEASES (`44`).** A card per environment shows the build it runs, whether it is up, and how long
+  it has been live; its list is that environment's health and deploy history. LATEST says where the
+  newest release runs, DRIFT lists the commits production doesn't have yet, RELEASES lists every
+  release. The panel charts uptime, deploys per week, and how far behind production is. Read-only.
+- **CI (`99`).** FAILING lists the workflows whose latest run on the watched branch failed and since
+  when, RUNNING what is in progress or queued, RECENT every run by day. PASS RATE covers the last 50
+  runs per repo, and each repo gets its own card when you watch two or three. The panel ranks
+  workflows by pass rate and by median duration. Read-only: nothing is re-run from here.
+- **MAIL (`55`)** and **LINEAR (`88`)** are described under
+  [Repos, reading and replying](#repos-reading-and-replying) and [Linear](#linear).
+
 ## Repos, reading and replying
 
 - **GitHub repos:** `s` → GITHUB lists every repo your `gh` account can see. Tick the repos to
   MONITOR (your PRs, CI) and, separately, the ones for the INBOX (notifications).
   Nothing ticked means everything. The REVIEW QUEUE ignores MONITOR: a PR that asks for your
   review, or is assigned to you, shows up whatever repo it's in.
-- **Detail pages:** `Enter` opens an item inside the app; `o` expands to the browser, `n`/`p` step
-  through the tile, `ctrl+r` reloads.
+- **Reading:** `Enter` opens an item inside the app, in a popup; `o` expands to the browser, `n`/`p` step
+  through the list it came from, `f` fills the screen, `ctrl+r` reloads.
+- **Mail page (`55`):** the newest 150 emails after your filters, sliced by the cards. The panel on the
+  right previews the highlighted email, then shows who writes to you most and the last seven days.
+  `d` deletes, `u` flips read / unread, `space` selects several emails for `d` or `u`, `r` opens the
+  email with the reply box ready, `z` undoes the last delete.
+- **Read in Outlook too:** opening a Microsoft 365 email marks it read in the mailbox, so Outlook on
+  every device agrees (Settings → Mail → MARK READ IN OUTLOOK, `[mail] mark_read`).
+- **Delete:** `d` on the Mail page or on an open email moves it to Deleted Items, the same as Delete in
+  Outlook, so it can be recovered there; `z` puts the last one back in the inbox.
+- Marking read and deleting change your mailbox, so Microsoft asks once for `Mail.ReadWrite` the first
+  time (until then PIXELDECK only has read access). Say no and mail you open here stays unread in
+  Outlook. Both work for Microsoft 365 mail; IMAP and Apple Mail stay read-only here.
 - **Reply:** on an email page `r` replies, `R` replies all. SEND needs a second press. Microsoft 365
   asks once for `Mail.Send` the first time you send; Apple Mail / IMAP open a reply in your mail
   app with your text on the clipboard.
@@ -111,6 +166,15 @@ and team keys. Press **`f`** to filter by status (your workflow's own states: In
 Todo…) and priority, multi-select; the tile says what's hidden. Ticket pages render Linear's
 Markdown: headings, tables, code, ☐/☑ checklists, ticket references as links, each comment as its own
 block.
+
+**The Linear page (`88`)** counts your work. OUTSTANDING is what's open and assigned to you outside
+the backlog, listed urgent first, then high, medium, low and no priority. NEW is what was assigned to
+you and not opened yet. ASSIGNED, CREATED and CLOSED count the tickets assigned to you, created by you,
+and yours that were completed in the period (`t` switches between 7, 30 and 90 days). BACKLOG is your
+own backlog, with the count for your whole team (`[linear] teams`, else the teams you're on) under it.
+The panel charts outstanding work by priority and by status, tickets created against closed over the
+last eight weeks, and what's overdue or due this week. `s` searches Linear from the page.
+ASSIGNED counts tickets that are still yours: one handed to you and then to someone else isn't in it.
 
 Tickets assigned to you in the last two weeks that you haven't opened yet come first with a pulsing
 **NEW** tag (the tile counts them), even when the state or status filter would hide them, as with a new
@@ -208,7 +272,8 @@ time, Microsoft asks once for Calendars.ReadWrite.
 
 ## Slack
 
-`m` (or Enter on a SLACK row) opens the Slack console: conversations on the left (unread first,
+Enter on a SLACK row opens that conversation in a popup (messages and the message box; `ctrl+l` opens
+the whole console). `m` or `66` opens the Slack console: conversations on the left (unread first,
 then DMs, then channels; ctrl+f to find), messages on the right, a message box at the bottom
 (Enter sends). On a message: `t` thread, `+` react, `e` edit yours, `x` delete yours (press twice),
 `o` open in Slack. ctrl+n starts a DM. Opening a conversation marks it read in Slack. New DMs and

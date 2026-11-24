@@ -50,12 +50,18 @@ class Releases:
         self.tag_for_sha: dict[str, str] = {}
         self.drift: int | None = None
         self.deploying: dict[str, str] = {}
+        # What the last pipeline() saw, kept for the RELEASES page so it needs no extra calls
+        self.envs: list[tuple[dict, dict | BaseException]] = []  # (env config, version info or error)
+        self.latest: dict | BaseException | None = None
+        self.recent_releases: list[dict] = []  # newest first, drafts left out
+        self.unshipped: list[dict] = []  # commits on the branch that the stats env doesn't run yet, newest first
+        self.last_ping: dict[str, tuple[bool, float, str]] = {}
 
     # ── version lookups ──────────────────────────────────────────────────────
 
     async def _workflow_env(self, repo: str, env: dict) -> dict:
         data = await run_json(
-            "gh", "api", f"repos/{repo}/actions/workflows/{env['workflow']}/runs?per_page=10"
+            "gh", "api", f"repos/{repo}/actions/workflows/{env['workflow']}/runs?per_page=50"
         )
         runs = data.get("workflow_runs", [])
         for run in runs:
@@ -73,6 +79,11 @@ class Releases:
             "busy": busy["head_branch"] if busy else None,
             "failed": failed["head_branch"] if failed else None,
             "verb": "deployed",
+            "runs": [  # newest first: the deploy history (50 runs covers the 8-week cadence chart)
+                {"id": r["id"], "tag": r["head_branch"], "sha": r["head_sha"], "status": r["status"],
+                 "conclusion": r["conclusion"], "when": parse_time(r["updated_at"]), "url": r["html_url"]}
+                for r in runs
+            ],
         }
 
     async def _pin_env(self, repo: str, branch: str, env: dict) -> dict:
@@ -116,7 +127,12 @@ class Releases:
 
     async def _latest_release(self, repo: str) -> dict | None:
         """The newest published GitHub release (pre-releases count: dev-* builds are pre-releases)."""
-        rels = await run_json("gh", "api", f"repos/{repo}/releases?per_page=10")
+        rels = await run_json("gh", "api", f"repos/{repo}/releases?per_page=100")
+        self.recent_releases = [
+            {"tag": r["tag_name"], "name": r.get("name") or r["tag_name"], "url": r.get("html_url"),
+             "when": parse_time(r.get("published_at") or r.get("created_at")), "prerelease": r.get("prerelease", False)}
+            for r in rels if not r.get("draft")
+        ]
         rel = next((r for r in rels if not r.get("draft")), None)
         if not rel:
             return None
@@ -182,6 +198,7 @@ class Releases:
         except httpx.HTTPError as exc:
             ms, ok, why = (time.perf_counter() - start) * 1000, False, type(exc).__name__
         self.health.setdefault(name, deque(maxlen=60)).append((ok, ms))
+        self.last_ping[name] = (ok, ms, why)
         return ok, ms, why
 
     # ── feed ─────────────────────────────────────────────────────────────────
@@ -220,6 +237,7 @@ class Releases:
                 self.deploying[env["name"]] = info["busy"]
         infos = results[: len(envs)]
         pings = iter(results[len(envs):])
+        self.envs, self.latest = list(zip(envs, infos)), latest
 
         def tags_of(info) -> set[str]:
             if isinstance(info, BaseException):
@@ -310,6 +328,13 @@ class Releases:
                 msgs = [c["commit"]["message"].splitlines()[0] for c in cmp.get("commits", [])]
                 # pin/chore commits are the release machinery, not shippable work
                 work = [m for m in msgs if not re.match(r"chore\((prod|staging)\)", m)]
+                self.unshipped = [
+                    {"sha": c["sha"], "subject": c["commit"]["message"].splitlines()[0], "url": c.get("html_url"),
+                     "author": (c.get("author") or {}).get("login") or c["commit"]["author"]["name"],
+                     "when": parse_time(c["commit"]["committer"]["date"])}
+                    for c in reversed(cmp.get("commits", []))
+                    if not re.match(r"chore\((prod|staging)\)", c["commit"]["message"])
+                ]
                 prs = sum(1 for m in work if re.search(r"\(#\d+\)\s*$", m))
                 self.drift = len(work)
                 newest = work[-1] if work else None
@@ -325,6 +350,7 @@ class Releases:
                     )
                 )
             except Exception as exc:
+                self.unshipped = []
                 out.append(Item(title=f"SHIP     ⚠ {exc}", icon="✖", tone="error"))
 
         pins = info.get("pins") or []

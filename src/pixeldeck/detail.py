@@ -22,7 +22,7 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import ModalScreen, Screen
+from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Markdown, OptionList, Static
 from textual.widgets.option_list import Option
 
@@ -308,7 +308,9 @@ async def run_page(ref: dict, app: PixelDeck) -> Page:
             sections.append(Section("FAILED LOG · LAST 80 LINES", text="\n".join(lines)))
         except Exception as exc:
             sections.append(Section("FAILED LOG", text=f"couldn't fetch the log: {exc}"))
-    return Page("CI RUN", f"{d['workflowName']}: {d['displayTitle']}", chips, sections, d["url"])
+    title = d["displayTitle"] if d["displayTitle"].startswith(d["workflowName"]) else \
+        f"{d['workflowName']}: {d['displayTitle']}"  # a scheduled run's title is just the workflow's name
+    return Page("CI RUN", title, chips, sections, d["url"])
 
 
 async def commit_page(ref: dict, app: PixelDeck) -> Page:
@@ -737,7 +739,16 @@ async def load(item: Item, app: PixelDeck) -> Page:
 # ── Screen ───────────────────────────────────────────────────────────────────
 
 DETAIL_CSS = f"""
-DetailScreen {{ background: {px.VOID}; }}
+DetailScreen {{ background: {px.VOID}; align: center middle; }}
+#d-frame {{ width: 100%; height: 1fr; background: {px.VOID}; }}
+/* popup: a framed card over whatever you were looking at (f toggles full screen) */
+DetailScreen.-popup {{ background: {px.VOID} 70%; }}
+DetailScreen.-popup #d-frame {{ width: 92%; max-width: 150; height: 92%; border: heavy {px.HOTPINK};
+                               border-title-color: {px.HOTPINK}; border-title-style: bold;
+                               border-subtitle-color: {px.DIM}; }}
+DetailScreen.-popup #d-head {{ padding: 0 2 0 2; }}
+DetailScreen.-popup #d-actions Button {{ min-width: 8; }}
+DetailScreen.-popup #back, DetailScreen.-popup #copy {{ display: none; }}  /* esc and c do these; the row is short */
 #d-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
 #d-rule {{ height: 1; }}
 #d-body {{ background: {px.VOID}; padding: 0 2; scrollbar-color: {px.PURPLE}; scrollbar-size-vertical: 1; }}
@@ -775,7 +786,10 @@ DetailScreen {{ background: {px.VOID}; }}
 """
 
 
-class DetailScreen(Screen):
+class DetailScreen(ModalScreen):
+    """One item, read inside PIXELDECK. As a popup it floats over the dashboard or page it came from;
+    f makes it fill the screen (and back)."""
+
     CSS = DETAIL_CSS
     BINDINGS = [
         Binding("escape,backspace,q", "back", "Back"),
@@ -793,11 +807,17 @@ class DetailScreen(Screen):
         Binding("r", "reply(False)", "Reply"),
         Binding("R", "reply(True)", "Reply all"),
         Binding("a,i", "attachments", "Attachments"),
+        Binding("d,delete", "trash", "Delete"),
+        Binding("u", "unread", "Mark unread"),
+        Binding("z", "undo_trash", "Undo delete"),
+        Binding("f", "full", "Full screen"),
     ]
 
-    def __init__(self, items: list[Item], index: int, source: str, draft: str | None = None) -> None:
-        super().__init__()
+    def __init__(self, items: list[Item], index: int, source: str, draft: str | None = None,
+                 popup: bool = False, reply: bool = False) -> None:
+        super().__init__(classes="-popup" if popup else "")
         self.items, self.index, self.source = items, index, source
+        self.want_reply = reply  # open the reply box as soon as the email has loaded
         self.page: Page | None = None
         self.draft = draft  # an agent's proposed reply: open the composer with it once the email loads
 
@@ -808,26 +828,44 @@ class DetailScreen(Screen):
     def compose(self) -> ComposeResult:
         from .app import Divider
 
-        yield Static(id="d-head")
-        yield Divider(id="d-rule")
-        with Horizontal(id="d-main"):
-            yield VerticalScroll(id="d-body")
-            yield OptionList(id="d-toc")
-        with Horizontal(id="d-actions"):
-            yield Button("◀ BACK", id="back")
-            yield Button("◀ PREV", id="prev")
-            yield Button("NEXT ▶", id="next")
-            yield Static(classes="spacer")
-            yield Button("REPLY", id="reply")
-            yield Button("REPLY ALL", id="reply-all")
-            yield Button("📎 ATTACHMENTS a", id="files")
-            yield Static(id="d-pos")
-            yield Button("COPY LINK", id="copy")
-            yield Button("OPEN IN BROWSER ↗", id="open", variant="primary")
+        with Vertical(id="d-frame"):
+            yield Static(id="d-head")
+            yield Divider(id="d-rule")
+            with Horizontal(id="d-main"):
+                yield VerticalScroll(id="d-body")
+                yield OptionList(id="d-toc")
+            with Horizontal(id="d-actions"):
+                yield Button("◀ BACK", id="back")
+                yield Button("◀ PREV", id="prev")
+                yield Button("NEXT ▶", id="next")
+                yield Static(classes="spacer")
+                yield Button("REPLY", id="reply")
+                yield Button("REPLY ALL", id="reply-all")
+                yield Button("📎 ATTACHMENTS a", id="files")
+                yield Button("🗑 DELETE d", id="trash")
+                yield Static(id="d-pos")
+                yield Button("COPY LINK", id="copy")
+                yield Button("OPEN IN BROWSER ↗", id="open", variant="primary")
         yield Footer()
 
     def on_mount(self) -> None:
+        self._frame_labels()
         self._load()
+
+    def _frame_labels(self) -> None:
+        frame = self.query_one("#d-frame", Vertical)
+        popup = self.has_class("-popup")
+        frame.border_title = f" {self.source} " if popup else ""
+        frame.border_subtitle = " esc close · f full screen · n / p next, previous " if popup else ""
+        self.query_one("#open", Button).label = "OPEN ↗" if popup else "OPEN IN BROWSER ↗"
+
+    def action_full(self) -> None:
+        self.toggle_class("-popup")
+        self._frame_labels()
+
+    def on_click(self, event) -> None:
+        if self.has_class("-popup") and event.widget is self:  # a click on the dimmed backdrop closes the popup
+            self.action_back()
 
     # rendering ----------------------------------------------------------------
 
@@ -858,10 +896,24 @@ class DetailScreen(Screen):
         btn = self.query_one("#files", Button)
         btn.display = bool(n)
         btn.label = f"📎 ATTACHMENTS ({n}) a" if n > 1 else "📎 ATTACHMENT a"
+        self.query_one("#trash", Button).display = self._changeable()
         self.refresh_bindings()
+
+    def _gone(self) -> bool:
+        """This screen has been dismissed (a job that was still running should just stop)."""
+        return self not in self.app.screen_stack
 
     @work(exclusive=True)
     async def _load(self) -> None:
+        from textual.css.query import NoMatches
+
+        try:
+            await self._show()
+        except NoMatches:  # closed while it was loading: the widgets are gone, and that's fine
+            if not self._gone():
+                raise
+
+    async def _show(self) -> None:
         item = self.item
         self.page = None
         viewed = getattr(self.app, "item_viewed", None)
@@ -894,7 +946,7 @@ class DetailScreen(Screen):
                         item.url)
         finally:
             timer.stop()
-        if item is not self.item:  # user moved on while this was loading
+        if self._gone() or item is not self.item:  # closed, or moved on, while this was loading
             return
         self.page = page
         self.query_one("#d-head", Static).update(self._head(page.kind, page.title, page.chips))
@@ -913,7 +965,8 @@ class DetailScreen(Screen):
         body.focus()
         self._sync_nav()
         self.call_after_refresh(self._build_toc)
-        if self.draft and page.reply:
+        if (self.draft or self.want_reply) and page.reply:
+            self.want_reply = False
             self.call_after_refresh(self.action_reply, False)
 
     # contents panel -------------------------------------------------------------
@@ -1027,7 +1080,45 @@ class DetailScreen(Screen):
             return bool(self.page and self.page.reply)  # hidden off email pages
         if action == "attachments":
             return bool(self.page and self.page.files)
+        if action in ("trash", "unread"):
+            return self._changeable()  # Microsoft 365 mail only
+        if action == "undo_trash":
+            return self._changeable() and bool(getattr(self.app, "_mail_trashed", None))
         return True
+
+    # changing mail ------------------------------------------------------------------
+
+    def _changeable(self) -> bool:
+        return bool(self.items) and (self.item.ref or {}).get("kind") == "graph_mail"
+
+    @on(Button.Pressed, "#trash")
+    def _trash_btn(self) -> None:
+        self.action_trash()
+
+    @work(group="mail-change")
+    async def action_trash(self) -> None:
+        """Move this email to Deleted Items and show the next one."""
+        item = self.item
+        if not await self.app.mail_trash([item]) or self._gone():
+            return
+        if item in self.items:  # the dashboard tile's own list has already dropped it
+            self.items.remove(item)
+        if not self.items:
+            self.dismiss(None)
+            return
+        self.index = min(self.index, len(self.items) - 1)
+        self._load()
+
+    @work(group="mail-change")
+    async def action_unread(self) -> None:
+        if await self.app.mail_set_read(self.item, False):
+            self.notify(self.item.title, title="✉ MARKED UNREAD", timeout=3)
+
+    @work(group="mail-change")
+    async def action_undo_trash(self) -> None:
+        await self.app.mail_undo()
+        if not self._gone():
+            self.refresh_bindings()
 
     @on(Button.Pressed, "#files")
     def action_attachments(self) -> None:

@@ -18,6 +18,10 @@ enabled = false
 # "github.com" hides that domain and its subdomains; "x@y.com" hides one address.
 hide_from = ["github.com"]
 hide_subjects = []   # case-insensitive substrings, e.g. ["[JIRA]"]
+# mark_read = true   # opening Microsoft 365 mail marks it read in Outlook too (asks for Mail.ReadWrite once)
+
+[ui]
+# popups = true      # Enter opens emails, tickets and PRs in a popup (f = full screen); false = always the full page
 
 # Any IMAP inbox (Gmail/Fastmail/iCloud with an app password). Repeat the block per account.
 # [[imap]]

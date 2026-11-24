@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+from datetime import datetime, timedelta, timezone
 
 from .base import Feed, Item, NotConfigured, ago, parse_time, run_cmd, run_json
 
@@ -34,6 +35,45 @@ fragment queuePr on PullRequest {
 }
 """
 
+# The GitHub page's open PRs and review queue: PR_QUERY plus the dates and review requests the page charts.
+OVERVIEW_QUERY = """
+query {
+  viewer {
+    login
+    pullRequests(first: 50, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        number title url createdAt updatedAt isDraft mergeable reviewDecision
+        repository { nameWithOwner }
+        commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+      }
+    }
+  }
+  reviews: search(query: "is:open is:pr review-requested:@me archived:false", type: ISSUE, first: 50) {
+    nodes { ...queuePr }
+  }
+  assigned: search(query: "is:open is:pr assignee:@me -author:@me archived:false", type: ISSUE, first: 50) {
+    nodes { ...queuePr }
+  }
+}
+
+fragment queuePr on PullRequest {
+  number title url createdAt updatedAt isDraft additions deletions
+  author { login }
+  repository { nameWithOwner }
+  timelineItems(itemTypes: [REVIEW_REQUESTED_EVENT], last: 5) {
+    nodes { ... on ReviewRequestedEvent { createdAt requestedReviewer { ... on User { login } } } }
+  }
+}
+"""
+
+DONE_FRAGMENT = """
+fragment donePr on PullRequest {
+  number title url state isDraft createdAt updatedAt mergedAt closedAt additions deletions
+  author { login }
+  repository { nameWithOwner }
+}
+"""
+
 CI_ICON = {
     "SUCCESS": ("✔", "success"),
     "FAILURE": ("✖", "error"),
@@ -54,6 +94,64 @@ REASON = {
     "subscribed": ("WATCH", "muted"),
     "security_alert": ("SECURITY", "error"),
 }
+
+
+def queue_item(pr: dict, why: str = "") -> Item:
+    """A PR waiting on your review, as the review-queue tile lists it."""
+    when = parse_time(pr["updatedAt"])
+    repo = pr["repository"]["nameWithOwner"].split("/")[-1]
+    size = f"+{pr['additions']}/-{pr['deletions']}"
+    parts = [repo, f"@{(pr.get('author') or {}).get('login', '?')}", *([why] if why else []), size, ago(when)]
+    return Item(
+        title=f"#{pr['number']} {pr['title']}",
+        meta=" · ".join(parts),
+        url=pr["url"],
+        ref={"kind": "pr", "url": pr["url"]},
+        icon="◇" if pr["isDraft"] else "◆",
+        tone="muted" if pr["isDraft"] else "accent",
+        when=when,
+    )
+
+
+def ci_state(pr: dict) -> str:
+    """The last commit's check rollup (SUCCESS, FAILURE, PENDING, ...), "" when it has no checks."""
+    commits = pr["commits"]["nodes"]
+    return ((commits[0]["commit"].get("statusCheckRollup") or {}) if commits else {}).get("state", "")
+
+
+def mine_item(pr: dict) -> Item:
+    """One of your open PRs: CI icon, then draft / conflict / review state."""
+    when = parse_time(pr["updatedAt"])
+    icon, tone = CI_ICON.get(ci_state(pr), ("·", "muted"))
+    flags = []
+    if pr["isDraft"]:
+        flags.append("draft")
+    if pr["mergeable"] == "CONFLICTING":
+        flags.append("CONFLICT")
+        tone = "error"
+    decision = pr.get("reviewDecision")
+    if decision == "APPROVED":
+        flags.append("approved")
+    elif decision == "CHANGES_REQUESTED":
+        flags.append("changes requested")
+        tone = "warning" if tone != "error" else tone
+    meta = " · ".join([pr["repository"]["nameWithOwner"].split("/")[-1], *flags, ago(when)])
+    return Item(title=f"#{pr['number']} {pr['title']}", meta=meta, url=pr["url"], icon=icon, tone=tone,
+                when=when, ref={"kind": "pr", "url": pr["url"]})
+
+
+def _merge_queue(data: dict) -> list[tuple[dict, str]]:
+    """Review requests plus PRs assigned to you, each once, newest update first."""
+    asked: dict[str, tuple[dict, str]] = {}
+    for key, why in (("reviews", ""), ("assigned", "assigned")):
+        for pr in data[key]["nodes"]:
+            if pr and pr.get("url") and pr["url"] not in asked:
+                asked[pr["url"]] = (pr, why)
+    return sorted(asked.values(), key=lambda pw: pw[0]["updatedAt"], reverse=True)
+
+
+def _stamp(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _check() -> None:
@@ -81,66 +179,78 @@ class GitHub:
 
         # The queue is PRs asking for you (review requested, or assigned to you), so it covers every repo,
         # not just github.repos: a request on another repo still needs you.
-        queue = []
-        asked: dict[str, tuple[dict, str]] = {}
-        for key, why in (("reviews", ""), ("assigned", "assigned")):
-            for pr in data[key]["nodes"]:
-                if pr and pr.get("url") and pr["url"] not in asked:
-                    asked[pr["url"]] = (pr, why)
-        for pr, why in sorted(asked.values(), key=lambda pw: pw[0]["updatedAt"], reverse=True):
-            when = parse_time(pr["updatedAt"])
-            repo = pr["repository"]["nameWithOwner"].split("/")[-1]
-            size = f"+{pr['additions']}/-{pr['deletions']}"
-            parts = [repo, f"@{(pr.get('author') or {}).get('login', '?')}", *([why] if why else []), size, ago(when)]
-            queue.append(
-                Item(
-                    title=f"#{pr['number']} {pr['title']}",
-                    meta=" · ".join(parts),
-                    url=pr["url"],
-                    ref={"kind": "pr", "url": pr["url"]},
-                    icon="◇" if pr["isDraft"] else "◆",
-                    tone="muted" if pr["isDraft"] else "accent",
-                    when=when,
-                )
-            )
-
-        mine = []
-        repos: list[str] = []
-        for pr in data["viewer"]["pullRequests"]["nodes"]:
-            when = parse_time(pr["updatedAt"])
-            full = pr["repository"]["nameWithOwner"]
-            if not self._watched(full):
-                continue
-            if full not in repos:
-                repos.append(full)
-            commits = pr["commits"]["nodes"]
-            rollup = (commits[0]["commit"].get("statusCheckRollup") or {}) if commits else {}
-            icon, tone = CI_ICON.get(rollup.get("state", ""), ("·", "muted"))
-            flags = []
-            if pr["isDraft"]:
-                flags.append("draft")
-            if pr["mergeable"] == "CONFLICTING":
-                flags.append("CONFLICT")
-                tone = "error"
-            decision = pr.get("reviewDecision")
-            if decision == "APPROVED":
-                flags.append("approved")
-            elif decision == "CHANGES_REQUESTED":
-                flags.append("changes requested")
-                tone = "warning" if tone != "error" else tone
-            meta = " · ".join([full.split("/")[-1], *flags, ago(when)])
-            mine.append(
-                Item(title=f"#{pr['number']} {pr['title']}", meta=meta, url=pr["url"], icon=icon, tone=tone,
-                     when=when, ref={"kind": "pr", "url": pr["url"]})
-            )
-        self._pr_repos = repos
+        queue = [queue_item(pr, why) for pr, why in _merge_queue(data)]
+        mine = [mine_item(pr) for pr in self._my_prs(data)]
 
         return (
             Feed(items=queue, count=len(queue)),
             Feed(items=mine, count=len(mine)),
         )
 
-    async def notifications(self) -> Feed:
+    def _my_prs(self, data: dict) -> list[dict]:
+        """Your open PRs in the watched repos (remembers their repos for the CI tile)."""
+        prs = [pr for pr in data["viewer"]["pullRequests"]["nodes"] if self._watched(pr["repository"]["nameWithOwner"])]
+        self._pr_repos = list(dict.fromkeys(pr["repository"]["nameWithOwner"] for pr in prs))
+        return prs
+
+    async def overview(self, periods: tuple[int, ...] = (7, 30, 90), weeks: int = 8) -> dict:
+        """Everything the GitHub page shows: the review queue (with when you were asked), your open PRs, the PRs
+        you opened / merged / reviewed over the longest period (up to 100 rows each), exact counts for every
+        period, and opened / merged counts per week. Four GraphQL calls at once: as one query the searches run
+        back to back and GitHub gives up after 10 seconds."""
+        _check()
+        now = datetime.now(timezone.utc)
+        longest = max(periods)
+        since = {d: _stamp(now - timedelta(days=d)) for d in periods}
+        kinds = {  # card → (search, sort, the field that dates a row)
+            "opened": ("is:pr author:@me created:{}", "created-desc", "createdAt"),
+            "merged": ("is:pr author:@me is:merged merged:{}", "updated-desc", "mergedAt"),
+            "reviewed": ("is:pr reviewed-by:@me -author:@me updated:{}", "updated-desc", "updatedAt"),
+        }
+
+        def count(alias: str, q: str) -> str:
+            return f'{alias}: search(query: "{q}", type: ISSUE, first: 0) {{ issueCount }}'
+
+        def query(kind: str) -> str:
+            q, order, _ = kinds[kind]
+            parts = [f'rows: search(query: "{q.format(">=" + since[longest])} sort:{order}", type: ISSUE, '
+                     "first: 100) { issueCount nodes { ...donePr } }"]
+            parts += [count(f"d{d}", q.format(">=" + since[d])) for d in periods if d != longest]
+            if kind != "reviewed":  # exact weekly counts, so a busy quarter past 100 rows still charts right
+                for w in range(weeks):  # w0 is the last 7 days
+                    end = now - timedelta(days=7 * w, seconds=1)
+                    span = f"{_stamp(now - timedelta(days=7 * (w + 1)))}..{_stamp(end)}"
+                    parts.append(count(f"w{w}", q.format(span)))
+            return "query {\n  " + "\n  ".join(parts) + "\n}\n" + DONE_FRAGMENT
+
+        async def call(q: str) -> dict:
+            return (await run_json("gh", "api", "graphql", "-f", f"query={q}", timeout=45))["data"]
+
+        data, *done = await asyncio.gather(call(OVERVIEW_QUERY), *(call(query(k)) for k in kinds))
+        self.login = login = data["viewer"]["login"]
+
+        queue = []
+        for pr, why in _merge_queue(data):
+            asks = [e for e in (pr.get("timelineItems") or {}).get("nodes") or [] if e and e.get("createdAt")]
+            for_me = [e for e in asks if ((e.get("requestedReviewer") or {}).get("login") or "") == login]
+            asked = (for_me or asks or [{}])[-1].get("createdAt") or pr.get("createdAt")
+            queue.append({**pr, "why": why, "askedAt": asked})
+        out: dict = {"login": login, "queue": queue, "mine": self._my_prs(data), "weekly": {}}
+        for (kind, (_, _, field)), d in zip(kinds.items(), done):
+            counts = {p: d[f"d{p}"]["issueCount"] for p in periods if p != longest}
+            counts[longest] = d["rows"]["issueCount"]
+            nodes = [n for n in d["rows"]["nodes"] if n and n.get("url")]
+            out[kind] = {"nodes": nodes, "count": counts, "field": field}
+            if "w0" in d:
+                out["weekly"][kind] = [d[f"w{w}"]["issueCount"] for w in reversed(range(weeks))]
+        return out
+
+    async def mark_read(self, thread: str) -> None:
+        """Marks one notification thread read on GitHub."""
+        _check()
+        await run_cmd("gh", "api", "-X", "PATCH", f"notifications/threads/{thread}")
+
+    async def notifications(self, limit: int = 30) -> Feed:
         _check()
         rows = await run_json("gh", "api", "notifications?per_page=50")
         items = []
@@ -164,6 +274,7 @@ class GitHub:
                         "type": subj["type"],
                         "reason": n["reason"],
                         "repo": repo,
+                        "thread": n["id"],
                     },
                     icon="●" if n["unread"] else "○",
                     tone=tone,
@@ -171,7 +282,7 @@ class GitHub:
                     when=when,
                 )
             )
-        return Feed(items=items[:30], count=sum(1 for i in items if i.unread))
+        return Feed(items=items[:limit], count=sum(1 for i in items if i.unread))
 
     async def ci_runs(self) -> Feed:
         _check()
@@ -217,6 +328,38 @@ class GitHub:
         items.sort(key=lambda i: i.when or 0, reverse=True)
         failing = sum(1 for i in items if i.tone == "error")
         return Feed(items=items[:20], count=failing)
+
+    async def ci_history(self, per_repo: int = 50) -> tuple[list[dict], dict[str, str]]:
+        """The CI page's deeper window: the last `per_repo` runs on the watched branch of each CI repo.
+
+        Returns (runs newest first, {repo: error} for repos that failed to load). Read-only.
+        """
+        _check()
+        repos = self.cfg.get("ci_repos") or self.cfg.get("repos", [])[:8] or self._pr_repos[:3]
+        if not repos:
+            raise NotConfigured("set github.ci_repos in config.toml to watch CI")
+        branch = self.cfg.get("ci_branch", "main")
+
+        async def one(repo: str) -> list[dict]:
+            data = await run_json("gh", "api", f"repos/{repo}/actions/runs?per_page={per_repo}&branch={branch}")
+            return [
+                {
+                    "repo": repo, "id": r["id"], "workflow": r["name"], "title": r.get("display_title") or r["name"],
+                    "status": r["status"], "conclusion": r.get("conclusion"), "branch": r["head_branch"],
+                    "event": r.get("event", ""), "sha": r.get("head_sha", ""), "url": r["html_url"],
+                    "created": parse_time(r.get("created_at")), "started": parse_time(r.get("run_started_at")),
+                    "updated": parse_time(r.get("updated_at")), "attempt": r.get("run_attempt", 1),
+                }
+                for r in data.get("workflow_runs", [])
+            ]
+
+        results = await asyncio.gather(*(one(r) for r in repos), return_exceptions=True)
+        errors = {repo: str(res)[:120] for repo, res in zip(repos, results) if isinstance(res, BaseException)}
+        if len(errors) == len(repos):
+            raise next(res for res in results if isinstance(res, BaseException))
+        runs = [run for res in results if isinstance(res, list) for run in res]
+        runs.sort(key=lambda r: r["created"].timestamp() if r["created"] else 0, reverse=True)
+        return runs, errors
 
 
 def _html_url(api_url: str | None, repo: str) -> str:

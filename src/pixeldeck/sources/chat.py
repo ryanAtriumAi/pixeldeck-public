@@ -147,6 +147,44 @@ query($filter: IssueFilter) {
 }
 """
 
+# the Linear page's numbers: everything is counted from the tickets themselves (Linear has no count query)
+STATS_QUERY = """
+query($filter: IssueFilter, $after: String) {
+  issues(first: 100, after: $after, filter: $filter, orderBy: updatedAt) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      identifier title url priority updatedAt dueDate createdAt completedAt
+      state { name type }
+      assignee { name }
+    }
+  }
+}
+"""
+
+ASSIGNED_QUERY = """
+query($filter: IssueFilter, $after: String) {
+  viewer { id }
+  issues(first: 100, after: $after, filter: $filter, orderBy: updatedAt) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      identifier title url priority updatedAt dueDate createdAt completedAt
+      state { name type }
+      assignee { name }
+      history(first: 50) { nodes { createdAt toAssigneeId } }
+    }
+  }
+}
+"""
+
+COUNT_QUERY = """
+query($filter: IssueFilter, $after: String) {
+  issues(first: 250, after: $after, filter: $filter) {
+    pageInfo { hasNextPage endCursor }
+    nodes { id }
+  }
+}
+"""
+
 TICKET_ID = re.compile(r"^\s*([A-Za-z][A-Za-z0-9]{1,6})-(\d+)\s*$")
 
 
@@ -238,6 +276,65 @@ class Linear:
         if teams:
             flt["team"] = {"key": {"in": teams}}
         return flt
+
+    async def _pages(self, query: str, flt: dict, cap: int = 1000) -> tuple[list[dict], bool, dict]:
+        """Every page of an issues query up to `cap` tickets. Returns (nodes, hit the cap, last response)."""
+        nodes: list[dict] = []
+        after = None
+        while True:
+            data = await self._gql(query, {"filter": flt, "after": after})
+            page = data["issues"]
+            nodes += page["nodes"]
+            if not page["pageInfo"]["hasNextPage"]:
+                return nodes, False, data
+            if len(nodes) >= cap:
+                return nodes, True, data
+            after = page["pageInfo"]["endCursor"]
+
+    async def stats(self, days: int = 90) -> dict:
+        """What the Linear page counts, for the last `days`: my open tickets, the ones I created, the
+        ones of mine that were completed, and the ones assigned to me (each with `assignedAt`)."""
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        mine = {"assignee": {"isMe": {"eq": True}}}
+        (open_, open_more, _), (created, created_more, _), (closed, closed_more, _), (touched, touched_more, last) = \
+            await asyncio.gather(
+                self._pages(STATS_QUERY, {**mine, "state": {"type": {"nin": ["completed", "canceled"]}}}),
+                self._pages(STATS_QUERY, {"creator": {"isMe": {"eq": True}}, "createdAt": {"gte": since.isoformat()}}),
+                self._pages(STATS_QUERY, {**mine, "completedAt": {"gte": since.isoformat()}}),
+                # assigning a ticket updates it, so anything assigned in the window was updated in it
+                self._pages(ASSIGNED_QUERY, {**mine, "updatedAt": {"gte": since.isoformat()}}, cap=800),
+            )
+        open_ = [n for n in open_ if n["state"]["type"] in STATE_ORDER]  # not duplicates and the like
+        me = last["viewer"]["id"]
+        assigned = []
+        for n in touched:
+            stamps = [parse_time(h["createdAt"]) for h in n["history"]["nodes"] if h.get("toAssigneeId") == me]
+            at = max((t for t in stamps if t), default=None)
+            if at is None and not any(h.get("toAssigneeId") for h in n["history"]["nodes"]):
+                at = parse_time(n["createdAt"])  # mine from the moment it was created: no hand-over in the history
+            if at and at >= since:
+                n["assignedAt"] = at.timestamp()
+                assigned.append(n)
+        assigned.sort(key=lambda n: n["assignedAt"], reverse=True)
+        return {"open": open_, "created": created, "closed": closed, "assigned": assigned, "since": since,
+                "days": days, "capped": {"open": open_more, "created": created_more, "closed": closed_more,
+                                         "assigned": touched_more}}
+
+    async def team_backlog(self, cap: int = 5000) -> tuple[int, bool]:
+        """How many tickets sit in a backlog state across my teams (linear.teams, else the teams I'm on).
+        Returns (count, hit the cap). Cached for ten minutes: it's a lot of pages on a big workspace."""
+        import time
+
+        hit = getattr(self, "_backlog", None)
+        if hit and time.monotonic() - hit[0] < 600:
+            return hit[1]
+        teams = [t.upper() for t in self.cfg.get("teams") or []] or await self.my_teams()
+        flt: dict = {"state": {"type": {"eq": "backlog"}}}
+        if teams:
+            flt["team"] = {"key": {"in": teams}}
+        nodes, more, _ = await self._pages(COUNT_QUERY, flt, cap=cap)
+        self._backlog = (time.monotonic(), (len(nodes), more))
+        return self._backlog[1]
 
     async def newly_assigned(self, acked: dict[str, float]) -> list[dict]:
         """Open tickets assigned to me in the last `new_days` that I haven't opened since, newest

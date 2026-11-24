@@ -1,7 +1,8 @@
 """Which emails are new (arrived since PIXELDECK last looked) and which you've acknowledged.
 
 Kept in ~/.config/pixeldeck/mail-state.json so a restart doesn't re-flash old mail or
-forget what you've already opened. This is local only: nothing is marked read on the server.
+forget what you've already opened. This file is local; marking Microsoft 365 mail read in the
+mailbox itself is separate (mail.mark_read, see app.py).
 """
 
 from __future__ import annotations
@@ -97,6 +98,16 @@ class MailState:
         self.save()
         _mute(item)
         return changed
+
+
+    def unacknowledge(self, item: Item) -> None:
+        """Marked unread again: forget that it was opened."""
+        key = mail_key(item)
+        if key and self.ack.pop(key, None) is not None:
+            self.save()
+        item.unread = True
+        item.tone = "accent"
+        item.icon = "✉"
 
 
 def _mute(item: Item) -> None:

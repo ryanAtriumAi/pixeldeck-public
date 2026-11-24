@@ -10,9 +10,13 @@ from __future__ import annotations
 
 import re
 
+from rich.style import Style
+from rich.text import Text
 from textual.binding import Binding
 from textual.widgets import Input, TextArea
 from textual.widgets.input import Selection
+
+from . import pixel as px
 
 
 class TextInput(Input):
@@ -78,3 +82,28 @@ class TextBox(TextArea):
 
     def action_cursor_document_end(self) -> None:
         self.move_cursor(self.document.end)
+
+
+def render_item(item, width: int, phase: float | None = None, glow: float | None = None) -> Text:
+    """One feed item as two lines (title, then meta), the way tiles and section pages list them.
+    phase: the NEW pulse (0..1). glow: marked words breathing green ↔ pink (a deploy in progress)."""
+    top = Text(no_wrap=True)
+    if phase is not None:
+        lit = px._lerp(px.SHADOW, px.HOTPINK, phase)
+        top.append(" NEW ", Style(color=px._lerp(px.DIM, px.VOID, phase), bgcolor=lit, bold=True))
+        top.append(" ")
+        top.append(item.title, Style(color=px._lerp(px.INK, px.HOTPINK, phase), bold=True))
+    else:
+        color = px.TONE.get(item.tone, px.INK)
+        top.append(f"{item.icon} ", Style(color=color, bold=True))
+        start = len(top)
+        top.append(item.title, Style(color=px.INK if item.tone != "muted" else px.DIM, bold=item.unread))
+        for text, tone in getattr(item, "marks", None) or []:
+            at = item.title.find(text) if text else -1
+            if at >= 0:
+                color = px._lerp(px.GREEN, px.HOTPINK, glow) if glow is not None else px.TONE.get(tone, px.INK)
+                top.stylize(Style(color=color, bold=True), start + at, start + at + len(text))
+    top.truncate(width, overflow="ellipsis")
+    sub = Text(f"  {item.meta}", Style(color=px.DIM), no_wrap=True)
+    sub.truncate(width, overflow="ellipsis")
+    return Text("\n").join([top, sub])

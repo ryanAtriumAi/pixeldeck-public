@@ -35,6 +35,7 @@ from .setup import SERVICES, FormScreen, OutlookScreen, SetupMenu
 from .sources.releases import Releases
 from .sources.system import System, docker_summary, repo_status
 from .updater import Updater, restart
+from .widgets import render_item
 
 THEME = Theme(
     name="pixeldeck",
@@ -358,27 +359,7 @@ class Tile(OptionList):
         return (math.sin(time.monotonic() * 2 * math.pi / 1.6 - math.pi / 2) + 1) / 2
 
     def _render_item(self, item, width: int, phase: float | None = None, glow: float | None = None) -> Text:
-        """phase: the NEW pulse. glow: marked words breathing green ↔ pink (a deploy in progress)."""
-        top = Text(no_wrap=True)
-        if phase is not None:
-            glow = px._lerp(px.SHADOW, px.HOTPINK, phase)
-            top.append(" NEW ", Style(color=px._lerp(px.DIM, px.VOID, phase), bgcolor=glow, bold=True))
-            top.append(" ")
-            top.append(item.title, Style(color=px._lerp(px.INK, px.HOTPINK, phase), bold=True))
-        else:
-            color = px.TONE.get(item.tone, px.INK)
-            top.append(f"{item.icon} ", Style(color=color, bold=True))
-            start = len(top)
-            top.append(item.title, Style(color=px.INK if item.tone != "muted" else px.DIM, bold=item.unread))
-            for text, tone in getattr(item, "marks", None) or []:
-                at = item.title.find(text) if text else -1
-                if at >= 0:
-                    color = px._lerp(px.GREEN, px.HOTPINK, glow) if glow is not None else px.TONE.get(tone, px.INK)
-                    top.stylize(Style(color=color, bold=True), start + at, start + at + len(text))
-        top.truncate(width, overflow="ellipsis")
-        sub = Text(f"  {item.meta}", Style(color=px.DIM), no_wrap=True)
-        sub.truncate(width, overflow="ellipsis")
-        return Text("\n").join([top, sub])
+        return render_item(item, width, phase, glow)
 
     def _pulse(self) -> None:
         phase = self._phase()
@@ -888,6 +869,8 @@ class PixelDeck(App):
                     c.refreshed = 0.0  # setting changed: unread state must be recomputed
         self.linear = Linear(self.cfg["linear"])
         self.linear_state = LinearState()
+        if not hasattr(self, "_mail_trashed"):
+            self._mail_trashed: list[tuple] = []  # (email, its id in Deleted Items), newest last: what z undoes
         self._linear_new: set[str] | None = None  # ids tagged NEW at the last sync (None before the first)
         from .sources.spotify import Spotify, installed
 
@@ -1072,7 +1055,12 @@ class PixelDeck(App):
 
     async def _mail(self) -> None:
         feed = await self._feed("mail", self.mail.inbox(), "mail")
-        if feed and feed.arrived:
+        if feed:
+            self.mail_arrived(feed)
+
+    def mail_arrived(self, feed: Feed) -> None:
+        """Toast for mail that showed up in this sync (the tile's or the Mail page's, whichever saw it first)."""
+        if feed.arrived:
             first = feed.arrived[0]
             who = first.meta.split(" · ")[0]
             more = f"  (+{len(feed.arrived) - 1} more)" if len(feed.arrived) > 1 else ""
@@ -1104,7 +1092,9 @@ class PixelDeck(App):
             self._run("slack")
             self._focus_tile("slack")
 
-        self.push_screen(SlackScreen(self.slack, convo, ts, thread_ts, draft), back)
+        # a row you opened: that conversation in a popup; the console itself (66, m): the whole page
+        popup = bool(convo) and self.cfg["ui"].get("popups", True)
+        self.push_screen(SlackScreen(self.slack, convo, ts, thread_ts, draft, popup=popup), back)
 
     async def _linear(self) -> None:
         # title: everything that matches; tickets assigned to me lately and not opened yet come first, tagged NEW
@@ -1228,7 +1218,7 @@ class PixelDeck(App):
         elif kind == "slack" and ref.get("channel"):
             self.open_slack(ref["channel"], ref.get("ts"), ref.get("thread_ts"), draft)
         else:
-            self.push_screen(DetailScreen([item], 0, source, draft))
+            self.open_items([item], 0, source, draft=draft)
 
     def agent_open(self, item) -> None:
         from .agentui import SNOOZE_SECS, AgentCard
@@ -1239,7 +1229,7 @@ class PixelDeck(App):
         kind = ref.get("kind")
         if kind == "agent_update":
             store.mark_update_seen(ref["id"])
-            self.push_screen(DetailScreen([item], 0, "AGENT"), lambda _=None: self._run("agent"))
+            self.open_items([item], 0, "AGENT", lambda _=None: self._run("agent"))
             return
         is_task = kind == "agent_task"
         row = store.task(ref["id"]) if is_task else store.db.execute(
@@ -1297,7 +1287,7 @@ class PixelDeck(App):
         p = json.loads(row["payload"] or "{}")
         kind = row["kind"]
         if kind == "reply_mail" and about:
-            self.push_screen(DetailScreen([about], 0, "AGENT", p.get("draft") or None))
+            self.open_items([about], 0, "AGENT", draft=p.get("draft") or None)
         elif kind == "slack_message" and p.get("channel"):
             self.open_slack(p["channel"], None, p.get("thread_ts"), p.get("draft") or None)
         elif kind == "create_event":
@@ -1482,9 +1472,13 @@ class PixelDeck(App):
 
         ref = item.ref or {}
         if ref.get("kind") == "linear" and ref.get("id"):
-            self._linear_opened(ref["id"])
+            self._linear_opened(ref["id"], item.flash)
+            item.flash = False
             return
-        if not mail_key(item) or not self.cfg["mail"].get("ack_on_open", True):
+        if not mail_key(item):
+            return
+        self._mail_opened(item)
+        if not self.cfg["mail"].get("ack_on_open", True):
             return
         was_unread = item.unread
         self.mail.state.acknowledge(item)
@@ -1495,10 +1489,134 @@ class PixelDeck(App):
             tile._set_title(tile.feed.count)
             self.query_one(Hud).set_count("mail", tile.feed.count)
 
-    def _linear_opened(self, ticket: str) -> None:
+    # changing mail (Microsoft 365): read flag, delete, undo -----------------------------
+
+    async def _mail_change(self, what: Callable[[], Awaitable], ask: bool = True) -> tuple[bool, object]:
+        """Run a mailbox change. The first one needs Mail.ReadWrite: the Microsoft approval opens,
+        then the change runs. Returns (it happened, its result)."""
+        from .sources.mail import NeedsConsent
+
+        try:
+            return True, await what()
+        except NeedsConsent:
+            if not ask:
+                return False, None
+            if not await self.push_screen_wait(OutlookScreen(extra_scopes=["Mail.ReadWrite"])):
+                self._mail_declined = True
+                return False, None
+            try:
+                return True, await what()
+            except NeedsConsent:
+                self._mail_declined = True
+                self.notify("Microsoft still says no to Mail.ReadWrite (your admin may need to allow it)",
+                            title="✖ MAIL NOT CHANGED", severity="error", timeout=8)
+                return False, None
+        except Exception as exc:
+            if is_network_error(exc):
+                raise
+            self.notify(str(exc)[:200], title="✖ MAIL NOT CHANGED", severity="error", timeout=8)
+            return False, None
+
+    def _mail_opened(self, item) -> None:
+        """Opening an email marks it read in the mailbox too, so Outlook agrees (mail.mark_read)."""
+        ref = item.ref or {}
+        if (ref.get("kind") == "graph_mail" and ref.get("server_unread") and self.outlook
+                and self.cfg["mail"].get("mark_read", True)):
+            self.run_worker(self._mail_mark_opened(item), group="mail-change")
+
+    async def _mail_mark_opened(self, item) -> None:
+        ok, _ = await self._mail_change(lambda: self.outlook.mark_read(item.ref["id"]))
+        if ok:
+            item.ref["server_unread"] = False
+        elif getattr(self, "_mail_declined", False) and self.cfg["mail"].get("mark_read", True):
+            # the permission was asked for and not given: stop asking on every email
+            from .config import set_value
+
+            self.cfg["mail"]["mark_read"] = False
+            set_value("mail.mark_read", False)
+            self.notify("Mail you open here stays unread in Outlook. Turn it back on in Settings → Mail.",
+                        title="✉ NOT MARKING READ", timeout=8)
+
+    def _mail_rows(self, items: list) -> list:
+        """The mail tile's own rows for these emails (pages hold separate copies)."""
+        from .sources.mailstate import mail_key
+
+        tile = self.query_one("#mail", Tile)
+        keys = {mail_key(it) for it in items}
+        return [it for it in (tile.feed.items if tile.feed else []) if mail_key(it) in keys]
+
+    async def mail_set_read(self, item, read: bool) -> bool:
+        """Mark one email read or unread, in the mailbox and here."""
+        if not self.mail.can_change(item) or not self.outlook:
+            self.notify("only Microsoft 365 mail can be changed from here", title="✉ MAIL", timeout=4)
+            return False
+        ok, _ = await self._mail_change(lambda: self.outlook.mark_read(item.ref["id"], read))
+        if not ok:
+            return False
+        tile = self.query_one("#mail", Tile)
+        for it in {id(i): i for i in [item, *self._mail_rows([item])]}.values():
+            it.ref["server_unread"] = not read
+            was = it.unread
+            if read:
+                self.mail.state.acknowledge(it)
+            else:
+                self.mail.state.unacknowledge(it)
+            if tile.feed and it in tile.feed.items:
+                tile.acknowledge(it)  # re-renders the row
+                if was != it.unread and tile.feed.count is not None:
+                    tile.feed.count = max(tile.feed.count + (1 if it.unread else -1), 0)
+                    tile._set_title(tile.feed.count)
+                    self.query_one(Hud).set_count("mail", tile.feed.count)
+        return True
+
+    async def mail_trash(self, items: list) -> list:
+        """Move emails to Deleted Items (recoverable; z on the Mail page or the email undoes the last
+        one). Returns the ones that moved."""
+        if not self.outlook or not any(self.mail.can_change(it) for it in items):
+            self.notify("only Microsoft 365 mail can be deleted from here", title="✉ MAIL", timeout=4)
+            return []
+        gone = []
+        for it in items:
+            if not self.mail.can_change(it):
+                continue
+            ok, moved = await self._mail_change(lambda it=it: self.outlook.trash(it.ref["id"]))
+            if not ok:
+                break
+            self._mail_trashed.append((it, moved))
+            gone.append(it)
+        if gone:
+            tile = self.query_one("#mail", Tile)
+            for row in self._mail_rows(gone):
+                tile.feed.items.remove(row)
+                if row.unread and tile.feed.count:
+                    tile.feed.count -= 1
+            if tile.feed:
+                tile._build(tile.feed)
+                self.query_one(Hud).set_count("mail", tile.feed.count)
+            what = gone[0].title if len(gone) == 1 else f"{len(gone)} emails"
+            self.notify(f"{what}  ·  z undoes", title="🗑 MOVED TO DELETED ITEMS", timeout=6)
+        return gone
+
+    async def mail_undo(self) -> object | None:
+        """Put the last deleted email back in the inbox. Returns it (its id is new)."""
+        if not self._mail_trashed:
+            self.notify("nothing to undo", title="✉ MAIL", timeout=3)
+            return None
+        item, moved = self._mail_trashed.pop()
+        ok, back = await self._mail_change(lambda: self.outlook.restore(moved))
+        if not ok:
+            self._mail_trashed.append((item, moved))
+            return None
+        item.ref["id"] = back or item.ref["id"]
+        self.notify(item.title, title="↩ BACK IN YOUR INBOX", timeout=5)
+        self._run("mail")
+        return item
+
+    def _linear_opened(self, ticket: str, tagged: bool = False) -> None:
+        """tagged: the row that was opened carried the NEW tag (a page or search row, not the tile's)."""
         tile = self.query_one("#linear", Tile)
         shown = [it for it in (tile.feed.items if tile.feed else []) if (it.ref or {}).get("id") == ticket and it.flash]
-        if not shown:
+        if not shown and not tagged:
             return  # not tagged NEW: nothing to clear
         self.linear_state.acknowledge(ticket)
         if self._linear_new is not None:
@@ -1652,7 +1770,15 @@ class PixelDeck(App):
                     pass
             tile.focus()
 
-        self.push_screen(DetailScreen(items, index, tile.label), back)
+        self.open_items(items, index, tile.label, back)
+
+    def open_items(self, items: list, index: int, source: str, done: Callable | None = None,
+                   draft: str | None = None, reply: bool = False) -> None:
+        """Open one of `items` (Next / Prev walk the rest): a popup over what you were looking at,
+        or the full page when [ui] popups is off. `done` gets the index you left on. reply: go
+        straight to the reply box once an email has loaded."""
+        self.push_screen(DetailScreen(items, index, source, draft=draft, popup=self.cfg["ui"].get("popups", True),
+                                      reply=reply), done)
 
     DOUBLE_PRESS = 0.5  # seconds between two presses of the same number
 
@@ -1706,6 +1832,32 @@ class PixelDeck(App):
         else:
             tile.focus()
 
+    PAGE_JOBS = {"reviews": "github", "mine": "github", "ci": "github"}  # the job that refills a tile
+
+    def _section_page(self, key: str) -> Screen | None:
+        """The landing page for a tile, when it has one."""
+        if key == "linear":
+            from .linearpage import LinearPage
+
+            return LinearPage()
+        if key == "mail":
+            from .mailpage import MailPage
+
+            return MailPage()
+        if key in ("reviews", "mine", "notifs"):
+            from .githubpage import GitHubPage
+
+            return GitHubPage({"notifs": "inbox"}.get(key, key))
+        if key == "releases":
+            from .releasespage import ReleasesPage
+
+            return ReleasesPage()
+        if key == "ci":
+            from .cipage import CIPage
+
+            return CIPage()
+        return None
+
     def open_tile_page(self, tile: Tile) -> None:
         """The full page for a tile: Slack's console, setup if it isn't connected, else the item pages."""
         if tile.key == "slack":
@@ -1716,6 +1868,14 @@ class PixelDeck(App):
             return
         if tile.key == "agent":
             self.action_agent_page()
+            return
+        if not tile.feed:
+            opt = tile.get_option_at_index(0) if tile.option_count else None
+            if opt is not None and (opt.id or "").endswith("-setup"):
+                self._setup_for(tile.key)
+                return
+        if page := self._section_page(tile.key):
+            self.push_screen(page, lambda _=None: (self._run(self.PAGE_JOBS.get(tile.key, tile.key)), tile.focus()))
             return
         if not tile.feed:
             opt = tile.get_option_at_index(0) if tile.option_count else None

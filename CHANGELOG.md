@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0 (2026-11-24)
+
+- **Popups:** `Enter` on an email, ticket, PR, CI run, release or Slack row opens it in a popup over
+  what you were looking at. `esc` or a click outside closes it, `n` / `p` step through the list, `f`
+  fills the screen. `[ui] popups = false` (Settings → System) brings back the full page.
+- **A page for every section:** pressing a tile's number twice opens its page: cards with that
+  section's numbers, the list behind the card you pick, and a panel of charts. `/` filters the list.
+  - **Linear (`88`):** outstanding work ranked urgent to low, new assignments, what you were assigned,
+    created and closed in the last 7 / 30 / 90 days (`t`), your backlog and your team's backlog count.
+  - **Mail (`55`):** unread, new, today, important and with-files slices, a preview of the highlighted
+    email, who writes to you most.
+  - **GitHub (`11` `22` `33`):** reviews waiting on you by how long they've waited, your open PRs with
+    the ones that need you first, the inbox by who it's for (`e` marks one read), and the PRs you
+    opened, merged and reviewed in the period.
+  - **Releases (`44`):** what each environment runs and whether it's up, where the latest release is
+    live, the commits production is behind, deploys per week.
+  - **CI (`99`):** failing and running workflows, recent runs by day, pass rate overall, per repo and
+    per workflow, median durations.
+  - Slack (`66`), Agenda (`77`) and Agent (`00`) keep the pages they had.
+- **Delete mail:** `d` on the Mail page or an open email moves it to Deleted Items (recoverable in
+  Outlook); `z` undoes the last one. `space` selects several emails for `d` or `u` (read / unread).
+- **Read in Outlook too:** opening a Microsoft 365 email now marks it read in the mailbox, not only in
+  PIXELDECK (`[mail] mark_read`). Deleting and marking read need `Mail.ReadWrite`, which Microsoft asks
+  you to approve once. IMAP and Apple Mail stay read-only.
+
 ## 0.3.4 (2026-11-18)
 
 - **Offline doesn't crash it:** a network error in a background job (Wi-Fi drop, sleep, DNS) shows one

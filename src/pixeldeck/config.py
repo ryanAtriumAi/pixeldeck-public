@@ -27,7 +27,8 @@ DEFAULTS: dict[str, Any] = {
         "client_id": "14d82eec-204b-4c2f-b7e8-296a70dab67e",
         "authority": "https://login.microsoftonline.com/organizations",
     },
-    "mail": {"hide_from": ["github.com"], "hide_subjects": [], "ack_on_open": True},
+    "mail": {"hide_from": ["github.com"], "hide_subjects": [], "ack_on_open": True,
+             "mark_read": True},  # opening Microsoft 365 mail marks it read in Outlook too
     "imap": [],
     "apple_mail": {"enabled": False},
     "slack": {"enabled": True, "queries": ["<@ME>", "to:me"], "hide_apps": True, "starred": [], "dm_days": 7},
@@ -43,6 +44,7 @@ DEFAULTS: dict[str, Any] = {
                "tone": "keep it casual, like a quick message to a colleague", "allow_remote": False,
                "context": 65536},  # context LM Studio loads models with (Hermes needs at least 64K)
     "releases": {"repo": "", "branch": "main", "env": []},
+    "ui": {"popups": True},  # open emails, tickets and PRs in a popup (f makes it full screen); False = full page
     "update": {"auto": False, "check_minutes": 15},
     "refresh": {
         "github": 120,

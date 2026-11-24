@@ -12,7 +12,7 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.screen import ModalScreen, Screen
+from textual.screen import ModalScreen
 from textual.widgets import Footer, Input, OptionList, Static
 
 from .widgets import TextInput
@@ -31,7 +31,14 @@ EMOJI = {
 }
 
 SLACK_CSS = f"""
-SlackScreen {{ background: {px.VOID}; }}
+SlackScreen {{ background: {px.VOID}; align: center middle; }}
+#sl-frame {{ width: 100%; height: 1fr; background: {px.VOID}; }}
+/* popup: one conversation over the dashboard (f opens the whole console) */
+SlackScreen.-popup {{ background: {px.VOID} 70%; }}
+SlackScreen.-popup #sl-frame {{ width: 92%; max-width: 130; height: 90%; border: heavy {px.HOTPINK};
+                              border-title-color: {px.HOTPINK}; border-title-style: bold;
+                              border-subtitle-color: {px.DIM}; }}
+SlackScreen.-popup #sl-left {{ display: none; }}
 #sl-head {{ height: 2; background: {px.DEEP}; padding: 0 1; }}
 #sl-body {{ height: 1fr; }}
 #sl-left {{ width: 38; background: {px.DEEP}; border-right: tall {px.PURPLE}; }}
@@ -120,7 +127,7 @@ class AskScreen(ModalScreen[str | None]):
         self.dismiss(None)
 
 
-class SlackScreen(Screen):
+class SlackScreen(ModalScreen):
     CSS = SLACK_CSS
     BINDINGS = [
         Binding("escape", "back", "Back"),
@@ -134,11 +141,13 @@ class SlackScreen(Screen):
         Binding("ctrl+r", "reload", "Reload"),
         Binding("ctrl+b", "toggle_apps", "Show/hide apps"),
         Binding("asterisk", "star", "Star channel"),
+        Binding("ctrl+l", "full", "Full console"),  # works while you type; f does too when you aren't
+        Binding("f", "full_key", show=False),
     ]
 
     def __init__(self, client: SlackClient, convo: str | None = None, ts: str | None = None,
-                 thread_ts: str | None = None, draft: str | None = None) -> None:
-        super().__init__()
+                 thread_ts: str | None = None, draft: str | None = None, popup: bool = False) -> None:
+        super().__init__(classes="-popup" if popup else "")  # popup: just this conversation, framed
         self.draft = draft  # an agent's proposed message: put in the box, Enter still sends
         self.sc = client
         self.convo_id = convo
@@ -153,17 +162,37 @@ class SlackScreen(Screen):
     # layout -------------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Static(id="sl-head")
-        with Horizontal(id="sl-body"):
-            with Vertical(id="sl-left"):
-                yield TextInput(placeholder="find a conversation…", id="sl-find")
-                yield OptionList(id="sl-convos")
-            with Vertical(id="sl-right"):
-                yield OptionList(id="sl-msgs")
-                yield TextInput(placeholder="pick a conversation", id="sl-compose")
+        with Vertical(id="sl-frame"):
+            yield Static(id="sl-head")
+            with Horizontal(id="sl-body"):
+                with Vertical(id="sl-left"):
+                    yield TextInput(placeholder="find a conversation…", id="sl-find")
+                    yield OptionList(id="sl-convos")
+                with Vertical(id="sl-right"):
+                    yield OptionList(id="sl-msgs")
+                    yield TextInput(placeholder="pick a conversation", id="sl-compose")
         yield Footer()
 
+    def _frame_labels(self) -> None:
+        frame = self.query_one("#sl-frame", Vertical)
+        popup = self.has_class("-popup")
+        frame.border_title = " SLACK " if popup else ""
+        frame.border_subtitle = " esc close · ctrl+l every conversation " if popup else ""
+
+    def action_full(self) -> None:
+        """Popup ↔ the whole console (the conversation list comes back)."""
+        self.toggle_class("-popup")
+        self._frame_labels()
+
+    def action_full_key(self) -> None:
+        self.action_full()
+
+    def on_click(self, event) -> None:
+        if self.has_class("-popup") and event.widget is self:  # a click on the dimmed backdrop closes the popup
+            self.dismiss()
+
     def on_mount(self) -> None:
+        self._frame_labels()
         self._head()
         self._boot()
         self.set_interval(10, self._poll)
@@ -474,7 +503,7 @@ class SlackScreen(Screen):
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
         # single-letter shortcuts must not fire while you're typing
-        if action in ("thread", "react", "edit", "delete", "open_slack", "star") and self._typing():
+        if action in ("thread", "react", "edit", "delete", "open_slack", "star", "full_key") and self._typing():
             return False
         return True
 
@@ -588,6 +617,8 @@ class SlackScreen(Screen):
             self._fill_convos()
 
     def action_find(self) -> None:
+        if self.has_class("-popup"):  # the conversation list is hidden in a popup: bring it back
+            self.action_full()
         self.query_one("#sl-find", Input).focus()
 
     def action_reload(self) -> None:

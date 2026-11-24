@@ -363,7 +363,7 @@ class AskScreen(Screen[None]):
             return
         from .detail import DetailScreen
 
-        self.app.push_screen(DetailScreen([h.item for h in hits], idx, "ASK"))
+        self.app.open_items([h.item for h in hits], idx, "ASK")
 
     @on(OptionList.OptionSelected, "#ask-src")
     def _picked(self, e: OptionList.OptionSelected) -> None:

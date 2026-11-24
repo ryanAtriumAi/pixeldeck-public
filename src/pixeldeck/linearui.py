@@ -271,7 +271,7 @@ class LinearSearch(ModalScreen[None]):
             if index is not None and index < len(self.items):
                 self.query_one("#ls-results").highlighted = index
 
-        self.app.push_screen(DetailScreen(self.items, int(e.option.id), "LINEAR SEARCH"), back)
+        self.app.open_items(self.items, int(e.option.id), "LINEAR SEARCH", back)
 
     def _current(self):
         lst = self.query_one("#ls-results")

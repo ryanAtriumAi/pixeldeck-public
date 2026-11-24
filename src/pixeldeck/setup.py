@@ -484,12 +484,16 @@ class OutlookScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(classes="box") as box:
-            cal = "Calendars.ReadWrite" in self.extra
+            cal, change = "Calendars.ReadWrite" in self.extra, "Mail.ReadWrite" in self.extra
             box.border_title = (" ⚙ CONNECT MICROSOFT 365 " if not self.extra else
-                                " ⚙ ALLOW CALENDAR CHANGES " if cal else " ⚙ ALLOW SENDING MAIL ")
+                                " ⚙ ALLOW CALENDAR CHANGES " if cal else
+                                " ⚙ ALLOW MAIL CHANGES " if change else " ⚙ ALLOW SENDING MAIL ")
             blurb = ("Inbox + calendar via Microsoft Graph (read-only: Mail.Read, Calendars.Read)." if not self.extra else
                      "Creating events needs Calendars.ReadWrite. Microsoft asks you to approve just that, once."
-                     if cal else "Replying needs Mail.Send. Microsoft asks you to approve just that, once.")
+                     if cal else
+                     "Marking mail read in Outlook and deleting it needs Mail.ReadWrite. Microsoft asks you to "
+                     "approve just that, once." if change else
+                     "Replying needs Mail.Send. Microsoft asks you to approve just that, once.")
             yield Static(Text(blurb, Style(color=px.HOTPINK, bold=True)), classes="steps")
             yield Static(_steps([
                 "Press START: PIXELDECK asks Microsoft for a one-time code.",
