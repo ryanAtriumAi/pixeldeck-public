@@ -2,7 +2,8 @@
 
 PIXELDECK asks once, the first time it starts without a [profile] in config.toml. Saving writes
 [profile] (and [ui] theme if you picked another one) and nothing else: sources, filters and every
-other setting stay as they are. Change it later in Settings → Profile.
+other setting stay as they are. Change it later in Settings → Profile. Moving through the themes
+tries each one on at once; nothing restarts.
 """
 
 from __future__ import annotations
@@ -84,14 +85,17 @@ def theme_row(key: str, current: bool, width: int = 68) -> Text:
 
 
 class ThemeList(OptionList):
-    """Pick a theme. `chosen` is what's highlighted; Enter posts OptionSelected as usual."""
+    """Pick a theme. Moving through the list tries each one on at once (the whole app restyles);
+    Enter posts OptionSelected as usual. `current` is the saved theme, `chosen` the highlighted one.
+    With `revert_on_blur`, leaving the list without choosing puts the saved theme back."""
 
     DEFAULT_CSS = """
     ThemeList { height: auto; max-height: 9; border: none; padding: 0; }
     ThemeList > .option-list--option { padding: 0 2; }  /* the highlight shows in the margins beside a row */
     """
 
-    def __init__(self, current: str, **kw) -> None:
+    def __init__(self, current: str, revert_on_blur: bool = False, **kw) -> None:
+        self.revert_on_blur = revert_on_blur
         self.current = current if current in px.THEMES else px.DEFAULT_THEME
         super().__init__(*[Option(theme_row(k, k == self.current), id=k) for k in px.THEMES], **kw)
 
@@ -100,6 +104,33 @@ class ThemeList(OptionList):
 
     def on_resize(self) -> None:
         self._redraw()  # rows are cut to the list's width, so none wraps onto a second line
+
+    def on_option_list_option_highlighted(self, e: OptionList.OptionHighlighted) -> None:
+        if e.option.id and self.has_focus:  # try it on: the live preview
+            self.app.set_look(e.option.id)
+
+    @staticmethod
+    def saved() -> str:
+        """What config.toml says now (an undo may have changed it since this list was built)."""
+        key = str(get_value("ui.theme") or px.DEFAULT_THEME)
+        return key if key in px.THEMES else px.DEFAULT_THEME
+
+    def revert(self) -> None:
+        """Back to the saved theme (the preview wasn't chosen)."""
+        saved = self.saved()
+        self.app.set_look(saved)
+        if saved != self.current:
+            self.mark(saved)
+        if self.option_count:
+            self.highlighted = self.get_option_index(saved)
+
+    def on_blur(self) -> None:
+        if self.revert_on_blur and px.ACTIVE != self.saved():
+            self.revert()
+
+    def on_unmount(self) -> None:
+        if self.revert_on_blur and px.ACTIVE != (saved := self.saved()):
+            self.app.set_look(saved)
 
     def _redraw(self) -> None:
         width = max(self.size.width - 4, 30)  # the option padding either side
@@ -117,15 +148,16 @@ class ThemeList(OptionList):
         self._redraw()
 
 
-class ProfileScreen(ModalScreen[dict | None]):
-    """Name, email and theme. Dismisses with {"theme": changed?} when saved, None when put off."""
+class ProfileScreen(ModalScreen[bool]):
+    """Name, email and theme. Dismisses with True when saved, False when put off (the look you were
+    trying on is taken off again)."""
 
     CSS = SETUP_CSS + f"""
-    ProfileScreen {{ align: center middle; background: {px.VOID} 70%; }}
+    ProfileScreen {{ align: center middle; background: $pd-void 70%; }}
     ProfileScreen .box {{ width: 84; }}
-    ProfileScreen .hint {{ color: {px.DIM}; }}
-    ProfileScreen ThemeList {{ background: {px.DEEP}; margin-top: 0; }}
-    ProfileScreen ThemeList > .option-list--option-highlighted {{ background: {px.HOTPINK}; }}
+    ProfileScreen .hint {{ color: $pd-dim; }}
+    ProfileScreen ThemeList {{ background: $pd-deep; margin-top: 0; }}
+    ProfileScreen ThemeList > .option-list--option-highlighted {{ background: $pd-hotpink; }}
     """
     BINDINGS = [Binding("escape", "later", "Later"), Binding("ctrl+s", "save", "Save")]
 
@@ -133,20 +165,27 @@ class ProfileScreen(ModalScreen[dict | None]):
         super().__init__()
         self.first_run = first_run  # no config.toml yet: this is a brand-new install
         self.start = start
+        self.saved_look = px.ACTIVE  # what "later" goes back to
+
+    def _blurb(self) -> Text:
+        blurb = Text()
+        if self.first_run:
+            blurb.append("Welcome to PIXELDECK. ", Style(color=px.HOTPINK, bold=True))
+            blurb.append("Say who you are and pick a look; connecting your accounts comes next.", Style(color=px.INK))
+        else:
+            blurb.append("One thing is new: a profile. ", Style(color=px.HOTPINK, bold=True))
+            blurb.append("Your sources, filters and settings stay exactly as they are; saving adds your "
+                         "profile to config.toml and touches nothing else.", Style(color=px.INK))
+        return blurb
+
+    def restyle(self) -> None:
+        """The theme just changed under us: redraw what this screen drew in code."""
+        self.query_one("#pf-blurb", Static).update(self._blurb())
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(classes="box") as box:
             box.border_title = " ★ PLAYER ONE · YOUR PROFILE "
-            blurb = Text()
-            if self.first_run:
-                blurb.append("Welcome to PIXELDECK. ", Style(color=px.HOTPINK, bold=True))
-                blurb.append("Say who you are and pick a look; connecting your accounts comes next.",
-                             Style(color=px.INK))
-            else:
-                blurb.append("One thing is new: a profile. ", Style(color=px.HOTPINK, bold=True))
-                blurb.append("Your sources, filters and settings stay exactly as they are; saving adds your "
-                             "profile to config.toml and touches nothing else.", Style(color=px.INK))
-            yield Static(blurb, classes="steps")
+            yield Static(self._blurb(), classes="steps", id="pf-blurb")
             yield Label("NAME", classes="field-label")
             yield TextInput(value=self.start.get("name", ""), placeholder="what PIXELDECK calls you", id="pf-name")
             yield Label("EMAIL  (optional)", classes="field-label")
@@ -155,8 +194,7 @@ class ProfileScreen(ModalScreen[dict | None]):
                          "It stays on this Mac.", classes="hint")
             yield Label("THEME", classes="field-label")
             yield ThemeList(str(get_value("ui.theme") or px.DEFAULT_THEME), id="pf-theme")
-            yield Static("↑ ↓ to look through them. A different theme restarts PIXELDECK (about a second).",
-                         classes="hint")
+            yield Static("↑ ↓ tries each one on as you move. SAVE keeps the one you stop on.", classes="hint")
             yield Static("", id="pf-status", classes="status")
             with Horizontal(classes="buttons"):
                 yield Button("LATER", id="later")
@@ -178,7 +216,8 @@ class ProfileScreen(ModalScreen[dict | None]):
 
     @on(Button.Pressed, "#later")
     def action_later(self) -> None:
-        self.dismiss(None)
+        self.app.set_look(self.saved_look)
+        self.dismiss(False)
 
     @on(Button.Pressed, "#save")
     def action_save(self) -> None:
@@ -203,4 +242,5 @@ class ProfileScreen(ModalScreen[dict | None]):
         except Exception as exc:  # e.g. a config.toml that no longer parses
             status.update(_bad(f"couldn't save: {exc}"[:200]))
             return
-        self.dismiss({"theme": theme != px.ACTIVE})
+        self.app.set_look(theme)
+        self.dismiss(True)

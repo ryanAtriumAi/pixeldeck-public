@@ -58,10 +58,12 @@ brand-new install the connect-your-accounts menu opens next.
 
 Themes: **ARCADE** (the original purple, pink and cyan), **PHOSPHOR** (green CRT), **AMBER**,
 **OCEAN** (navy, teal and coral), **FROST** (soft blue-grey), **MONO** (greyscale) and **DAYLIGHT**
-(light, for bright rooms). Each row in the picker is drawn in that theme's own colours. Change name,
-email or theme any time in Settings (`s`) → Profile; Enter on a theme applies it, and PIXELDECK
-restarts to do so (about a second), because every screen builds its styles from the palette when it
-loads. Or set `[ui] theme = "ocean"` in `config.toml` and restart.
+(light, for bright rooms). Each row in the picker is drawn in that theme's own colours, and moving
+through the list tries each one on: the whole dashboard restyles at once, nothing restarts. In the
+profile screen SAVE keeps the one you stopped on and `esc` puts the old one back. Change name, email or
+theme any time in Settings (`s`) → Profile: Enter keeps a theme, moving away without Enter puts the
+saved one back, `ctrl+z` undoes. Or set `[ui] theme = "ocean"` in `config.toml`; a running PIXELDECK
+picks it up when the file is saved.
 
 ## Setup
 
@@ -82,6 +84,12 @@ cards (the numbers that matter for that section) and lists whatever the selected
 `←` / `→`, the card's number, or a click picks a card. `Enter` opens a row in a popup, `/` filters
 the list as you type, `o` opens the row in the browser, `ctrl+r` reloads, `esc` goes back. A panel
 on the right charts the section. The footer lists each page's own keys.
+
+A page opens with numbers straight away and updates them in place when its load finishes; the header
+says which you are looking at (`numbers from 3m ago · updating…`, then `synced 12s ago`). Pages opened
+before in this run come back whole (rows and side panel too); RELEASES draws from what its tile already
+loaded. After a restart a page shows its last numbers until the load arrives: only the card numbers
+and hints are kept on disk (`~/.config/pixeldeck/pages-cache.json`), never the rows under them.
 
 | Press | Page | Cards |
 | --- | --- | --- |

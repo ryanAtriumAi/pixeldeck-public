@@ -83,9 +83,16 @@ GRADIENT: list[str] = []
 SPRITE_COLORS: dict[str, str] = {}  # letters in the sprites below map to palette entries; "." is transparent
 
 
+def css_vars(name: str) -> dict[str, str]:
+    """A theme as stylesheet variables: $pd-void, $pd-hotpink, $pd-inline-bg… (every screen's CSS uses these,
+    so switching the Textual theme restyles everything at once)."""
+    theme = THEMES[name]
+    return {f"pd-{slot.lower().replace('_', '-')}": theme[slot] for slot in SLOTS}
+
+
 def apply_theme(name: str | None) -> str:
-    """Switch the palette. Call it before the screens are imported: their CSS is built from these
-    colours once, at import (so the app restarts to change theme). Returns the theme in use."""
+    """Switch the palette that code draws with (px.VOID, px.TONE, the logo gradient…). Stylesheets follow
+    the Textual theme instead (see css_vars and PixelDeck.set_look). Returns the theme in use."""
     global ACTIVE, DARK
     ACTIVE = name if name in THEMES else DEFAULT_THEME
     theme = THEMES[ACTIVE]

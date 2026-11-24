@@ -26,8 +26,8 @@ STATE_ICON = {"MERGED": ("◆", "green"), "CLOSED": ("✕", "muted"), "DRAFT": (
 TILES = {"reviews": "reviews", "mine": "mine", "inbox": "notifs"}  # card → the dashboard tile it stands for
 DIRECT = {"review_requested", "mention", "assign", "security_alert"}  # someone wants you, by name
 PARTICIPATING = {"author", "comment", "team_mention"}
-WAIT_BUCKETS = [("UNDER 1 DAY", 1, px.CYAN), ("1–3 DAYS", 3, px.VIOLET), ("3–7 DAYS", 7, px.YELLOW),
-                ("OVER A WEEK", 10**6, px.RED)]
+WAIT_BUCKETS = [("UNDER 1 DAY", 1, "CYAN"), ("1–3 DAYS", 3, "VIOLET"), ("3–7 DAYS", 7, "YELLOW"),
+                ("OVER A WEEK", 10**6, "RED")]  # label, upper bound in days, palette slot (read when drawn)
 
 
 def _days(since: str | None) -> float:
@@ -65,6 +65,7 @@ class GitHubPage(SectionScreen):
     NAME = "GITHUB"
     REFRESH = 300.0
     SIDE_TITLE = "PULL REQUESTS"
+    STATE = ("data", "inbox", "days", "read_here")
 
     BINDINGS = [
         *SectionScreen.BINDINGS,
@@ -237,8 +238,8 @@ class GitHubPage(SectionScreen):
         out.append_text(heading(f"WAITING ON YOU · {len(live)}"))
         if live:
             waits = [sum(1 for pr in live if _bucket(_days(pr["askedAt"])) == i) for i in range(len(WAIT_BUCKETS))]
-            for (label, _, color), n in zip(WAIT_BUCKETS, waits):
-                out.append_text(hbar(label, n, max(waits), width, color))
+            for (label, _, slot), n in zip(WAIT_BUCKETS, waits):
+                out.append_text(hbar(label, n, max(waits), width, getattr(px, slot)))
             first = live[0]
             repo = first["repository"]["nameWithOwner"].split("/")[-1]
             text = f"{_span(_days(first['askedAt']))} · #{first['number']} {repo}"

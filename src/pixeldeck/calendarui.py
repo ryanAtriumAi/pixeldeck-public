@@ -134,22 +134,22 @@ def overlaps(events: list[dict], start: datetime, end: datetime) -> list[dict]:
 
 
 CAL_CSS = f"""
-AgendaScreen {{ background: {px.VOID}; }}
-#cal-head {{ height: 2; background: {px.DEEP}; padding: 0 1; }}
+AgendaScreen {{ background: $pd-void; }}
+#cal-head {{ height: 2; background: $pd-deep; padding: 0 1; }}
 #cal-days {{ height: 3fr; padding: 0 1; }}
 .cal-day {{ width: 1fr; height: 1fr; margin-right: 1; }}
-.cal-day > Label {{ width: 1fr; background: {px.PANEL}; color: {px.INK}; text-style: bold; padding: 0 1; }}
-.cal-day.-today > Label {{ background: {px.HOTPINK}; color: {px.VOID}; }}
-.cal-day OptionList {{ height: 1fr; background: {px.DEEP}; border: tall {px.SHADOW}; scrollbar-size-vertical: 1; }}
-.cal-day OptionList:focus {{ border: tall {px.HOTPINK}; }}
-.cal-day OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-.cal-day OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-#cal-bottom {{ height: 2fr; margin: 1 1 0 1; border: panel {px.CYAN}; border-title-color: {px.VOID};
-               border-title-style: bold; background: {px.DEEP}; }}
+.cal-day > Label {{ width: 1fr; background: $pd-panel; color: $pd-ink; text-style: bold; padding: 0 1; }}
+.cal-day.-today > Label {{ background: $pd-hotpink; color: $pd-void; }}
+.cal-day OptionList {{ height: 1fr; background: $pd-deep; border: tall $pd-shadow; scrollbar-size-vertical: 1; }}
+.cal-day OptionList:focus {{ border: tall $pd-hotpink; }}
+.cal-day OptionList > .option-list--option-highlighted {{ background: $pd-select; }}
+.cal-day OptionList:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+#cal-bottom {{ height: 2fr; margin: 1 1 0 1; border: panel $pd-cyan; border-title-color: $pd-void;
+               border-title-style: bold; background: $pd-deep; }}
 #cal-detail {{ height: 1fr; padding: 0 1; scrollbar-size-vertical: 1; }}
 #cal-actions {{ height: 3; padding: 0 1; }}
-#cal-actions Button {{ margin-right: 1; min-width: 12; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-#cal-actions Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+#cal-actions Button {{ margin-right: 1; min-width: 12; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+#cal-actions Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 """
 
 
@@ -481,23 +481,23 @@ class AgendaScreen(Screen):
 # ── new event ────────────────────────────────────────────────────────────────
 
 NEW_CSS = f"""
-NewEventScreen {{ align: center middle; background: {px.VOID} 70%; }}
-NewEventScreen > VerticalScroll {{ width: 96; max-width: 95%; height: auto; max-height: 92%; background: {px.DEEP};
-                                   border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+NewEventScreen {{ align: center middle; background: $pd-void 70%; }}
+NewEventScreen > VerticalScroll {{ width: 96; max-width: 95%; height: auto; max-height: 92%; background: $pd-deep;
+                                   border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                                    padding: 1 2; }}
 NewEventScreen .row {{ height: auto; }}
 NewEventScreen .cell {{ width: 1fr; height: auto; margin-right: 1; }}
-NewEventScreen Label {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
-NewEventScreen Input {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-NewEventScreen Input:focus {{ border: tall {px.HOTPINK}; }}
-NewEventScreen Input.-bad {{ border: tall {px.RED}; }}
-NewEventScreen TextArea {{ height: 6; background: {px.PANEL}; border: tall {px.PURPLE}; }}
-NewEventScreen TextArea:focus {{ border: tall {px.HOTPINK}; }}
-NewEventScreen Checkbox {{ background: {px.DEEP}; border: none; margin-top: 1; }}
+NewEventScreen Label {{ color: $pd-cyan; text-style: bold; margin-top: 1; }}
+NewEventScreen Input {{ background: $pd-panel; border: tall $pd-purple; }}
+NewEventScreen Input:focus {{ border: tall $pd-hotpink; }}
+NewEventScreen Input.-bad {{ border: tall $pd-red; }}
+NewEventScreen TextArea {{ height: 6; background: $pd-panel; border: tall $pd-purple; }}
+NewEventScreen TextArea:focus {{ border: tall $pd-hotpink; }}
+NewEventScreen Checkbox {{ background: $pd-deep; border: none; margin-top: 1; }}
 #ne-preview {{ margin-top: 1; height: auto; }}
 #ne-buttons {{ height: auto; margin-top: 1; align-horizontal: right; }}
-#ne-buttons Button {{ margin-left: 1; min-width: 14; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-#ne-buttons Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+#ne-buttons Button {{ margin-left: 1; min-width: 14; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+#ne-buttons Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 """
 
 

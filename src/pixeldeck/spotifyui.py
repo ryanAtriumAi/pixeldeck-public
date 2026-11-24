@@ -31,11 +31,11 @@ INTRO = 1.2  # seconds for the record to slide out and the bars to rise
 ART_RES = {48: 16, 32: 16, 24: 12, 16: 8}
 
 NOTE = ["....hhh.", "....h.hh", "....h...", "....h...", "..hhh...", ".hhhh...", ".hhh....", "........"]
-EQ_STOPS = [px.CYAN, px.BLUE, px.VIOLET, px.HOTPINK, px.PINK]
+EQ_STOPS = ["CYAN", "BLUE", "VIOLET", "HOTPINK", "PINK"]  # palette slots, read when drawn
 
 CSS = f"""
-SpotifyScreen {{ background: {px.VOID}; }}
-#sp-head {{ height: auto; background: {px.DEEP}; padding: 1 2; }}
+SpotifyScreen {{ background: $pd-void; }}
+#sp-head {{ height: auto; background: $pd-deep; padding: 1 2; }}
 #sp-stage {{ height: 1fr; align-vertical: middle; }}
 #sp-top {{ height: auto; padding: 1 2 0 2; }}
 #sp-scene {{ width: auto; height: auto; }}
@@ -343,7 +343,7 @@ class SpotifyScreen(Screen):
             lit = round(self.levels[i] * hpx)
             peak = min(round(self.peaks[i] * hpx), hpx - 1)
             for k in range(lit):
-                c = px.gradient_at(k / max(hpx - 1, 1), EQ_STOPS)
+                c = px.gradient_at(k / max(hpx - 1, 1), [getattr(px, s) for s in EQ_STOPS])
                 y = hpx - 1 - k
                 grid[y][i * 3] = grid[y][i * 3 + 1] = c
             if peak > 0 and peak >= lit:

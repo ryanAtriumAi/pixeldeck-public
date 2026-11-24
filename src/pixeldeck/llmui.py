@@ -18,14 +18,14 @@ from . import pixel as px
 from .config import set_value
 
 LLM_CSS = f"""
-ModelScreen {{ align: center middle; background: {px.VOID} 70%; }}
-ModelScreen > Vertical {{ width: 96; max-width: 95%; height: auto; max-height: 85%; background: {px.DEEP};
-                          border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+ModelScreen {{ align: center middle; background: $pd-void 70%; }}
+ModelScreen > Vertical {{ width: 96; max-width: 95%; height: auto; max-height: 85%; background: $pd-deep;
+                          border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                           padding: 1 2; }}
-#llm-list {{ height: auto; max-height: 18; background: {px.DEEP}; border: none; margin: 1 0; }}
-#llm-list > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-#llm-list:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-#llm-free {{ background: {px.DEEP}; border: none; }}
+#llm-list {{ height: auto; max-height: 18; background: $pd-deep; border: none; margin: 1 0; }}
+#llm-list > .option-list--option-highlighted {{ background: $pd-select; }}
+#llm-list:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+#llm-free {{ background: $pd-deep; border: none; }}
 #llm-status {{ height: auto; margin-top: 1; }}
 """
 
@@ -58,8 +58,9 @@ class ModelScreen(ModalScreen[bool]):
         self.query_one("#llm-list", OptionList).focus()
         self.action_refresh()
 
-    def _status(self, text: Text | str, color: str = px.INK) -> None:
-        self.query_one("#llm-status", Static).update(text if isinstance(text, Text) else Text(text, Style(color=color)))
+    def _status(self, text: Text | str, color: str | None = None) -> None:
+        text = text if isinstance(text, Text) else Text(text, Style(color=color or px.INK))
+        self.query_one("#llm-status", Static).update(text)
 
     @work(exclusive=True, group="list")
     async def action_refresh(self) -> None:

@@ -6,6 +6,7 @@ were ASSIGNED, CREATED and CLOSED in the period, and your BACKLOG. Picking a car
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from rich.text import Text
@@ -19,7 +20,7 @@ from .sources.chat import PRIORITY_NAMES, STATE_ORDER, issue_item
 PERIODS = [7, 30, 90]
 FETCH_DAYS = 90  # one fetch covers every period and the 8-week chart
 PRIORITY_TONE = {1: "error", 2: "accent", 3: "secondary", 4: "primary", 0: "muted"}
-PRIORITY_COLOR = {1: px.RED, 2: px.HOTPINK, 3: px.CYAN, 4: px.VIOLET, 0: px.DIM}
+PRIORITY_COLOR = {1: "RED", 2: "HOTPINK", 3: "CYAN", 4: "VIOLET", 0: "DIM"}  # palette slots, read when drawn
 
 
 def _prio(n: dict) -> int:
@@ -31,6 +32,7 @@ class LinearPage(SectionScreen):
     TILE = "linear"
     REFRESH = 300.0
     SIDE_TITLE = "WORKLOAD"
+    STATE = ("stats", "fresh", "team_backlog", "days")
 
     BINDINGS = [
         *SectionScreen.BINDINGS,
@@ -60,15 +62,14 @@ class LinearPage(SectionScreen):
 
     async def fetch(self) -> list[Card]:
         linear = self.app.linear
-        self.stats = await linear.stats(FETCH_DAYS)
-        try:
-            self.fresh = await linear.newly_assigned(self.app.linear_state.ack)
-        except Exception:  # the NEW card is extra: never lose the page over it
-            self.fresh = []
-        try:
-            self.team_backlog = await linear.team_backlog()
-        except Exception:
-            self.team_backlog = None
+        stats, fresh, team = await asyncio.gather(  # three separate queries: run them side by side
+            linear.stats(FETCH_DAYS), linear.newly_assigned(self.app.linear_state.ack), linear.team_backlog(),
+            return_exceptions=True)
+        if isinstance(stats, BaseException):
+            raise stats
+        self.stats = stats
+        self.fresh = [] if isinstance(fresh, BaseException) else fresh  # NEW and the team count are extras:
+        self.team_backlog = None if isinstance(team, BaseException) else team  # never lose the page over them
         return self._cards()
 
     # cards ------------------------------------------------------------------------
@@ -156,7 +157,7 @@ class LinearPage(SectionScreen):
         peak = max(counts.values(), default=0)
         out.append_text(heading("OUTSTANDING BY PRIORITY"))
         for p, name in PRIORITY_NAMES:
-            out.append_text(hbar(name.upper(), counts[p], peak, width, PRIORITY_COLOR[p]))
+            out.append_text(hbar(name.upper(), counts[p], peak, width, getattr(px, PRIORITY_COLOR[p])))
 
         states: dict[str, list] = {}
         for n in active:

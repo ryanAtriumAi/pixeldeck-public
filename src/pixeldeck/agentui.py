@@ -82,14 +82,14 @@ def build_feed(store: st.AgentStore, seen: set[str] | None) -> Feed:
 # ── cards ─────────────────────────────────────────────────────────────────────
 
 CARD_CSS = f"""
-AgentCard {{ align: center middle; background: {px.VOID} 70%; }}
-AgentCard > VerticalScroll {{ width: 100; max-width: 95%; height: auto; max-height: 85%; background: {px.DEEP};
-                              border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+AgentCard {{ align: center middle; background: $pd-void 70%; }}
+AgentCard > VerticalScroll {{ width: 100; max-width: 95%; height: auto; max-height: 85%; background: $pd-deep;
+                              border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                               padding: 1 2; }}
-AgentCard .draft {{ background: {px.PANEL}; color: {px.INK}; padding: 1 2; margin-top: 1; }}
+AgentCard .draft {{ background: $pd-panel; color: $pd-ink; padding: 1 2; margin-top: 1; }}
 AgentCard .buttons {{ height: auto; margin-top: 1; align-horizontal: right; }}
-AgentCard Button {{ margin-left: 1; min-width: 12; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-AgentCard Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+AgentCard Button {{ margin-left: 1; min-width: 12; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+AgentCard Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 """
 
 
@@ -222,19 +222,19 @@ class AgentCard(ModalScreen[str | None]):
 # ── the full page (00) ──────────────────────────────────────────────────────────
 
 PAGE_CSS = f"""
-AgentScreen {{ background: {px.VOID}; }}
-#ag-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
+AgentScreen {{ background: $pd-void; }}
+#ag-head {{ height: auto; background: $pd-deep; padding: 1 2 0 2; }}
 #ag-body {{ height: 1fr; }}
-#ag-list {{ width: 52; height: 1fr; background: {px.DEEP}; border: none; border-right: tall {px.PURPLE}; padding: 0 1; }}
-#ag-list > .option-list--option-highlighted {{ background: {px.SELECT}; }}
+#ag-list {{ width: 52; height: 1fr; background: $pd-deep; border: none; border-right: tall $pd-purple; padding: 0 1; }}
+#ag-list > .option-list--option-highlighted {{ background: $pd-select; }}
 #ag-right {{ width: 1fr; height: 1fr; }}
-#ag-detail {{ height: 1fr; padding: 1 2; background: {px.VOID}; scrollbar-color: {px.PURPLE}; scrollbar-size-vertical: 1; }}
-#ag-detail .draft {{ background: {px.PANEL}; color: {px.INK}; padding: 1 2; margin-top: 1; max-width: 110; }}
-#ag-detail Markdown {{ background: {px.DEEP}; padding: 1 2 0 2; margin: 0; max-width: 110; }}
-#ag-detail MarkdownH1, #ag-detail MarkdownH2, #ag-detail MarkdownH3 {{ color: {px.HOTPINK}; background: transparent; text-style: bold; }}
+#ag-detail {{ height: 1fr; padding: 1 2; background: $pd-void; scrollbar-color: $pd-purple; scrollbar-size-vertical: 1; }}
+#ag-detail .draft {{ background: $pd-panel; color: $pd-ink; padding: 1 2; margin-top: 1; max-width: 110; }}
+#ag-detail Markdown {{ background: $pd-deep; padding: 1 2 0 2; margin: 0; max-width: 110; }}
+#ag-detail MarkdownH1, #ag-detail MarkdownH2, #ag-detail MarkdownH3 {{ color: $pd-hotpink; background: transparent; text-style: bold; }}
 #ag-buttons {{ height: auto; padding: 0 2 1 2; align-horizontal: right; }}
-#ag-buttons Button {{ margin-left: 1; min-width: 12; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-#ag-buttons Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+#ag-buttons Button {{ margin-left: 1; min-width: 12; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+#ag-buttons Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 """
 
 

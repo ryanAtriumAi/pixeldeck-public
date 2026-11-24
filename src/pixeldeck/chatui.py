@@ -20,32 +20,32 @@ from . import pixel as px
 from .ask import SOURCE_ICON, Turn, link_citations
 
 ASK_CSS = f"""
-AskScreen {{ background: {px.VOID}; }}
-#ask-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
+AskScreen {{ background: $pd-void; }}
+#ask-head {{ height: auto; background: $pd-deep; padding: 1 2 0 2; }}
 #ask-rule {{ height: 1; }}
-#ask-log {{ height: 1fr; background: {px.VOID}; padding: 0 2; scrollbar-color: {px.PURPLE}; scrollbar-size-vertical: 1; }}
+#ask-log {{ height: 1fr; background: $pd-void; padding: 0 2; scrollbar-color: $pd-purple; scrollbar-size-vertical: 1; }}
 #ask-log .turn {{ height: auto; margin-top: 1; max-width: 120; }}
-#ask-log .q {{ height: auto; color: {px.INK}; }}
+#ask-log .q {{ height: auto; color: $pd-ink; }}
 #ask-log .trace {{ height: auto; padding: 0 0 0 2; }}
-#ask-log Markdown {{ background: {px.DEEP}; padding: 1 2 0 2; margin: 0 0 0 2; }}
+#ask-log Markdown {{ background: $pd-deep; padding: 1 2 0 2; margin: 0 0 0 2; }}
 #ask-log MarkdownParagraph {{ margin: 0 0 1 0; }}
 #ask-log MarkdownBulletList, #ask-log MarkdownOrderedList {{ margin: 0 0 1 0; }}
-#ask-log MarkdownH1, #ask-log MarkdownH2, #ask-log MarkdownH3 {{ color: {px.HOTPINK}; background: transparent;
+#ask-log MarkdownH1, #ask-log MarkdownH2, #ask-log MarkdownH3 {{ color: $pd-hotpink; background: transparent;
     text-style: bold; margin: 0; }}
 #ask-log MarkdownListItem MarkdownParagraph {{ margin: 0; }}
-#ask-log MarkdownBullet {{ color: {px.HOTPINK}; }}
-#ask-log MarkdownBlock > .code_inline {{ color: {px.INLINE}; background: {px.INLINE_BG}; }}
-#ask-log MarkdownBlock > .strong {{ color: {px.INK}; text-style: bold; }}
-#ask-log MarkdownFence {{ background: {px.FENCE}; border-left: outer {px.PURPLE}; margin: 1 0; }}
+#ask-log MarkdownBullet {{ color: $pd-hotpink; }}
+#ask-log MarkdownBlock > .code_inline {{ color: $pd-inline; background: $pd-inline-bg; }}
+#ask-log MarkdownBlock > .strong {{ color: $pd-ink; text-style: bold; }}
+#ask-log MarkdownFence {{ background: $pd-fence; border-left: outer $pd-purple; margin: 1 0; }}
 #ask-log .err {{ height: auto; padding: 0 0 0 2; }}
-#ask-log .hello {{ height: auto; color: {px.DIM}; margin-top: 1; }}
-#ask-src {{ height: auto; max-height: 10; background: {px.DEEP}; border: none; border-top: solid {px.SHADOW};
-            border-title-color: {px.CYAN}; border-title-style: bold; padding: 0 1; display: none; }}
+#ask-log .hello {{ height: auto; color: $pd-dim; margin-top: 1; }}
+#ask-src {{ height: auto; max-height: 10; background: $pd-deep; border: none; border-top: solid $pd-shadow;
+            border-title-color: $pd-cyan; border-title-style: bold; padding: 0 1; display: none; }}
 #ask-src.-on {{ display: block; }}
-#ask-src > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-#ask-src:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-#ask-q {{ background: {px.PANEL}; border: tall {px.PURPLE}; margin: 0 1; }}
-#ask-q:focus {{ border: tall {px.HOTPINK}; }}
+#ask-src > .option-list--option-highlighted {{ background: $pd-select; }}
+#ask-src:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+#ask-q {{ background: $pd-panel; border: tall $pd-purple; margin: 0 1; }}
+#ask-q:focus {{ border: tall $pd-hotpink; }}
 """
 
 HELLO_MODEL = (

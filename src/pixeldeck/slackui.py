@@ -31,35 +31,35 @@ EMOJI = {
 }
 
 SLACK_CSS = f"""
-SlackScreen {{ background: {px.VOID}; align: center middle; }}
-#sl-frame {{ width: 100%; height: 1fr; background: {px.VOID}; }}
+SlackScreen {{ background: $pd-void; align: center middle; }}
+#sl-frame {{ width: 100%; height: 1fr; background: $pd-void; }}
 /* popup: one conversation over the dashboard (f opens the whole console) */
-SlackScreen.-popup {{ background: {px.VOID} 70%; }}
-SlackScreen.-popup #sl-frame {{ width: 92%; max-width: 130; height: 90%; border: heavy {px.HOTPINK};
-                              border-title-color: {px.HOTPINK}; border-title-style: bold;
-                              border-subtitle-color: {px.DIM}; }}
+SlackScreen.-popup {{ background: $pd-void 70%; }}
+SlackScreen.-popup #sl-frame {{ width: 92%; max-width: 130; height: 90%; border: heavy $pd-hotpink;
+                              border-title-color: $pd-hotpink; border-title-style: bold;
+                              border-subtitle-color: $pd-dim; }}
 SlackScreen.-popup #sl-left {{ display: none; }}
-#sl-head {{ height: 2; background: {px.DEEP}; padding: 0 1; }}
+#sl-head {{ height: 2; background: $pd-deep; padding: 0 1; }}
 #sl-body {{ height: 1fr; }}
-#sl-left {{ width: 38; background: {px.DEEP}; border-right: tall {px.PURPLE}; }}
-#sl-find {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-#sl-find:focus {{ border: tall {px.HOTPINK}; }}
-#sl-convos {{ height: 1fr; background: {px.DEEP}; border: none; scrollbar-size-vertical: 1; }}
+#sl-left {{ width: 38; background: $pd-deep; border-right: tall $pd-purple; }}
+#sl-find {{ background: $pd-panel; border: tall $pd-purple; }}
+#sl-find:focus {{ border: tall $pd-hotpink; }}
+#sl-convos {{ height: 1fr; background: $pd-deep; border: none; scrollbar-size-vertical: 1; }}
 #sl-right {{ width: 1fr; }}
-#sl-msgs {{ height: 1fr; background: {px.VOID}; border: none; padding: 0 1; scrollbar-size-vertical: 1;
-            scrollbar-color: {px.PURPLE}; }}
-#sl-compose {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-#sl-compose:focus {{ border: tall {px.HOTPINK}; }}
-#sl-compose.-edit {{ border: tall {px.YELLOW}; }}
-#sl-compose > .input--suggestion {{ color: {px.HOTPINK} 55%; }}
-SlackScreen OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-SlackScreen OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
+#sl-msgs {{ height: 1fr; background: $pd-void; border: none; padding: 0 1; scrollbar-size-vertical: 1;
+            scrollbar-color: $pd-purple; }}
+#sl-compose {{ background: $pd-panel; border: tall $pd-purple; }}
+#sl-compose:focus {{ border: tall $pd-hotpink; }}
+#sl-compose.-edit {{ border: tall $pd-yellow; }}
+#sl-compose > .input--suggestion {{ color: $pd-hotpink 55%; }}
+SlackScreen OptionList > .option-list--option-highlighted {{ background: $pd-select; }}
+SlackScreen OptionList:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
 SlackScreen OptionList > .option-list--option {{ padding: 0 1; }}
-AskScreen {{ align: center middle; background: {px.VOID} 60%; }}
-AskScreen > Vertical {{ width: 70; height: auto; max-height: 80%; background: {px.DEEP}; border: panel {px.HOTPINK};
-                        border-title-color: {px.VOID}; border-title-style: bold; padding: 1 2; }}
-AskScreen Input {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-AskScreen OptionList {{ height: auto; max-height: 14; background: {px.DEEP}; border: none; }}
+AskScreen {{ align: center middle; background: $pd-void 60%; }}
+AskScreen > Vertical {{ width: 70; height: auto; max-height: 80%; background: $pd-deep; border: panel $pd-hotpink;
+                        border-title-color: $pd-void; border-title-style: bold; padding: 1 2; }}
+AskScreen Input {{ background: $pd-panel; border: tall $pd-purple; }}
+AskScreen OptionList {{ height: auto; max-height: 14; background: $pd-deep; border: none; }}
 """
 
 

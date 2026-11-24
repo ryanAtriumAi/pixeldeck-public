@@ -739,50 +739,50 @@ async def load(item: Item, app: PixelDeck) -> Page:
 # ── Screen ───────────────────────────────────────────────────────────────────
 
 DETAIL_CSS = f"""
-DetailScreen {{ background: {px.VOID}; align: center middle; }}
-#d-frame {{ width: 100%; height: 1fr; background: {px.VOID}; }}
+DetailScreen {{ background: $pd-void; align: center middle; }}
+#d-frame {{ width: 100%; height: 1fr; background: $pd-void; }}
 /* popup: a framed card over whatever you were looking at (f toggles full screen) */
-DetailScreen.-popup {{ background: {px.VOID} 70%; }}
-DetailScreen.-popup #d-frame {{ width: 92%; max-width: 150; height: 92%; border: heavy {px.HOTPINK};
-                               border-title-color: {px.HOTPINK}; border-title-style: bold;
-                               border-subtitle-color: {px.DIM}; }}
+DetailScreen.-popup {{ background: $pd-void 70%; }}
+DetailScreen.-popup #d-frame {{ width: 92%; max-width: 150; height: 92%; border: heavy $pd-hotpink;
+                               border-title-color: $pd-hotpink; border-title-style: bold;
+                               border-subtitle-color: $pd-dim; }}
 DetailScreen.-popup #d-head {{ padding: 0 2 0 2; }}
 DetailScreen.-popup #d-actions Button {{ min-width: 8; }}
 DetailScreen.-popup #back, DetailScreen.-popup #copy {{ display: none; }}  /* esc and c do these; the row is short */
-#d-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
+#d-head {{ height: auto; background: $pd-deep; padding: 1 2 0 2; }}
 #d-rule {{ height: 1; }}
-#d-body {{ background: {px.VOID}; padding: 0 2; scrollbar-color: {px.PURPLE}; scrollbar-size-vertical: 1; }}
-#d-body .sec-title {{ margin-top: 1; color: {px.VOID}; background: {px.PURPLE}; text-style: bold; width: auto; padding: 0 1; }}
-#d-body .sec-text {{ color: {px.INK}; padding: 1 1; background: {px.DEEP}; }}
-#d-body Markdown {{ background: {px.DEEP}; padding: 1 2 0 2; margin: 0; max-width: 112; }}
+#d-body {{ background: $pd-void; padding: 0 2; scrollbar-color: $pd-purple; scrollbar-size-vertical: 1; }}
+#d-body .sec-title {{ margin-top: 1; color: $pd-void; background: $pd-purple; text-style: bold; width: auto; padding: 0 1; }}
+#d-body .sec-text {{ color: $pd-ink; padding: 1 1; background: $pd-deep; }}
+#d-body Markdown {{ background: $pd-deep; padding: 1 2 0 2; margin: 0; max-width: 112; }}
 #d-body .sec-text {{ max-width: 112; }}
 #d-body MarkdownParagraph {{ margin: 0 0 1 0; }}
 #d-body MarkdownH3, #d-body MarkdownH4 {{ margin: 1 0 0 0; }}
 #d-body MarkdownBulletList, #d-body MarkdownOrderedList {{ margin: 0 0 1 0; }}
-#d-body MarkdownH1, #d-body MarkdownH2, #d-body MarkdownH3 {{ color: {px.HOTPINK}; background: transparent; text-style: bold; }}
-#d-body MarkdownFence {{ background: {px.PANEL}; }}
-#d-body MarkdownBlockQuote {{ border-left: outer {px.PURPLE}; background: {px.PANEL}; }}
-#d-body MarkdownBlock > .code_inline {{ color: {px.INLINE}; background: {px.INLINE_BG}; }}
-#d-body MarkdownBlock > .strong {{ color: {px.INK}; text-style: bold; }}
-#d-body MarkdownBlock > .em {{ color: {px.INK}; text-style: italic; }}
-#d-body MarkdownBlock > .s {{ color: {px.DIM}; text-style: strike; }}
-#d-body MarkdownFence {{ background: {px.FENCE}; border-left: outer {px.PURPLE}; margin: 1 0; }}
-#d-body MarkdownTH {{ color: {px.CYAN}; text-style: bold; }}
+#d-body MarkdownH1, #d-body MarkdownH2, #d-body MarkdownH3 {{ color: $pd-hotpink; background: transparent; text-style: bold; }}
+#d-body MarkdownFence {{ background: $pd-panel; }}
+#d-body MarkdownBlockQuote {{ border-left: outer $pd-purple; background: $pd-panel; }}
+#d-body MarkdownBlock > .code_inline {{ color: $pd-inline; background: $pd-inline-bg; }}
+#d-body MarkdownBlock > .strong {{ color: $pd-ink; text-style: bold; }}
+#d-body MarkdownBlock > .em {{ color: $pd-ink; text-style: italic; }}
+#d-body MarkdownBlock > .s {{ color: $pd-dim; text-style: strike; }}
+#d-body MarkdownFence {{ background: $pd-fence; border-left: outer $pd-purple; margin: 1 0; }}
+#d-body MarkdownTH {{ color: $pd-cyan; text-style: bold; }}
 #d-body MarkdownTable {{ margin: 1 0; }}
-#d-body MarkdownHorizontalRule {{ color: {px.SHADOW}; }}
-#d-body MarkdownBullet {{ color: {px.HOTPINK}; }}
+#d-body MarkdownHorizontalRule {{ color: $pd-shadow; }}
+#d-body MarkdownBullet {{ color: $pd-hotpink; }}
 #d-body MarkdownH1, #d-body MarkdownH2 {{ margin: 1 0 0 0; }}
 #d-loading {{ padding: 2 2; }}
 #d-main {{ height: 1fr; }}
-#d-toc {{ width: 34; display: none; background: {px.DEEP}; border-left: tall {px.SHADOW}; border-title-color: {px.CYAN};
+#d-toc {{ width: 34; display: none; background: $pd-deep; border-left: tall $pd-shadow; border-title-color: $pd-cyan;
           border-title-style: bold; padding: 0 1; scrollbar-size-vertical: 1; }}
 #d-toc.-on {{ display: block; }}
-#d-toc > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-#d-actions {{ height: 3; background: {px.DEEP}; padding: 0 1; }}
-#d-actions Button {{ margin-right: 1; min-width: 12; height: 3; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-#d-actions Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+#d-toc > .option-list--option-highlighted {{ background: $pd-select; }}
+#d-actions {{ height: 3; background: $pd-deep; padding: 0 1; }}
+#d-actions Button {{ margin-right: 1; min-width: 12; height: 3; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+#d-actions Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 #d-actions .spacer {{ width: 1fr; }}
-#d-pos {{ width: auto; content-align: right middle; height: 3; color: {px.DIM}; padding: 0 1; }}
+#d-pos {{ width: auto; content-align: right middle; height: 3; color: $pd-dim; padding: 0 1; }}
 """
 
 
@@ -1152,13 +1152,13 @@ class AttachmentPicker(ModalScreen[None]):
     """Pick an attachment: Enter opens it on its own, f shows it in Finder instead."""
 
     DEFAULT_CSS = f"""
-    AttachmentPicker {{ align: center middle; background: {px.VOID} 70%; }}
-    AttachmentPicker > Vertical {{ width: 96; max-width: 95%; height: auto; max-height: 80%; background: {px.DEEP};
-                                   border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+    AttachmentPicker {{ align: center middle; background: $pd-void 70%; }}
+    AttachmentPicker > Vertical {{ width: 96; max-width: 95%; height: auto; max-height: 80%; background: $pd-deep;
+                                   border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                                    padding: 1 2; }}
-    AttachmentPicker OptionList {{ height: auto; max-height: 20; background: {px.DEEP}; border: none; margin-top: 1; }}
-    AttachmentPicker OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-    AttachmentPicker OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
+    AttachmentPicker OptionList {{ height: auto; max-height: 20; background: $pd-deep; border: none; margin-top: 1; }}
+    AttachmentPicker OptionList > .option-list--option-highlighted {{ background: $pd-select; }}
+    AttachmentPicker OptionList:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
     """
     BINDINGS = [Binding("escape,q,a", "close", "Close"), Binding("o", "in_app", "Open in its app"),
                 Binding("f", "finder", "Show in Finder")]

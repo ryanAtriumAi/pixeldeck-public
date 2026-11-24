@@ -61,6 +61,7 @@ class CIPage(SectionScreen):
     TILE = "ci"
     REFRESH = 90.0
     SIDE_TITLE = "BUILD HEALTH"
+    STATE = ("runs", "errors")
 
     def __init__(self, card: str | None = None) -> None:
         super().__init__(card)
@@ -89,6 +90,10 @@ class CIPage(SectionScreen):
             cards += [Card(f"repo:{r}", r.split("/")[-1].upper()[:16], tone="secondary", empty="no runs")
                       for r in repos]
         return cards
+
+    def on_disk(self, card: Card) -> bool:
+        # a repo's board only exists once runs are loaded (and its key names the repo): memory only
+        return bool(card.value) and not card.key.startswith("repo:")
 
     async def fetch(self) -> list[Card]:
         self.runs, self.errors = await self.app.gh.ci_history(PER_REPO)

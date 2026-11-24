@@ -33,6 +33,7 @@ class MailPage(SectionScreen):
     REFRESH = 90.0
     SIDE_TITLE = "PREVIEW"
     SIDE_FOLLOWS = True
+    STATE = ("feed", "unread_beyond")  # not `marked`: a selection belongs to one visit
 
     BINDINGS = [
         *SectionScreen.BINDINGS,

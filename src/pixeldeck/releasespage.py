@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import statistics
+import time
 from datetime import datetime, timedelta, timezone
 
 from rich.text import Text
@@ -45,6 +46,7 @@ class ReleasesPage(SectionScreen):
     TILE = "releases"
     REFRESH = 120.0
     SIDE_TITLE = "SHIPPING"
+    STATE = ("ready",)
 
     def __init__(self, card: str | None = None) -> None:
         super().__init__(card)
@@ -73,6 +75,16 @@ class ReleasesPage(SectionScreen):
             Card("drift", "DRIFT", tone="accent", empty="production is current"),
             Card("releases", "RELEASES", tone="primary", empty="no releases yet"),
         ]
+
+    def instant(self) -> tuple[list[Card], float] | None:
+        """The RELEASES tile already ran the same pipeline: when it last succeeded, draw from what it kept."""
+        from .app import Tile
+
+        tile = next((t for t in self.app.query(Tile) if t.key == self.TILE), None)
+        if tile is None or tile.feed is None or not tile.updated or not self.rel.envs:
+            return None
+        self.ready = True
+        return self._cards(), time.time() - (time.monotonic() - tile.updated)
 
     async def fetch(self) -> list[Card]:
         await self.rel.pipeline()  # refreshes versions, health, drift and the release list in one go

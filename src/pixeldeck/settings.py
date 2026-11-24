@@ -40,50 +40,50 @@ from .sources.chat import SCOPES as LINEAR_SCOPES, SORTS as LINEAR_SORTS, STATES
 from .setup import SERVICES, FormScreen, GitHubScreen, OutlookScreen, _bad, _busy, _ok, status
 
 SETTINGS_CSS = f"""
-SettingsScreen {{ background: {px.VOID}; }}
-#st-head {{ height: 2; background: {px.DEEP}; padding: 0 1; }}
+SettingsScreen {{ background: $pd-void; }}
+#st-head {{ height: 2; background: $pd-deep; padding: 0 1; }}
 #st-body {{ height: 1fr; }}
-#st-nav {{ width: 34; background: {px.DEEP}; border-right: tall {px.PURPLE}; }}
-#st-nav OptionList {{ height: 1fr; background: {px.DEEP}; border: none; }}
-#st-nav OptionList > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-#st-nav OptionList:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-#st-form {{ width: 1fr; padding: 1 2; background: {px.VOID}; scrollbar-size-vertical: 1; scrollbar-color: {px.PURPLE}; }}
-#st-side {{ width: 40; padding: 1 2; background: {px.DEEP}; border-left: tall {px.SHADOW}; }}
-.st-title {{ color: {px.HOTPINK}; text-style: bold; margin-bottom: 1; }}
-.st-sub {{ color: {px.VOID}; background: {px.PURPLE}; text-style: bold; width: auto; padding: 0 1; margin-top: 1; }}
+#st-nav {{ width: 34; background: $pd-deep; border-right: tall $pd-purple; }}
+#st-nav OptionList {{ height: 1fr; background: $pd-deep; border: none; }}
+#st-nav OptionList > .option-list--option-highlighted {{ background: $pd-select; }}
+#st-nav OptionList:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+#st-form {{ width: 1fr; padding: 1 2; background: $pd-void; scrollbar-size-vertical: 1; scrollbar-color: $pd-purple; }}
+#st-side {{ width: 40; padding: 1 2; background: $pd-deep; border-left: tall $pd-shadow; }}
+.st-title {{ color: $pd-hotpink; text-style: bold; margin-bottom: 1; }}
+.st-sub {{ color: $pd-void; background: $pd-purple; text-style: bold; width: auto; padding: 0 1; margin-top: 1; }}
 .st-status {{ height: auto; margin-bottom: 1; }}
 .field {{ height: auto; margin-top: 1; }}
-.field > .lbl {{ width: 24; color: {px.CYAN}; text-style: bold; padding-top: 1; }}
+.field > .lbl {{ width: 24; color: $pd-cyan; text-style: bold; padding-top: 1; }}
 .field > .ctl {{ width: 1fr; height: auto; }}
-.field .help {{ color: {px.DIM}; height: auto; }}
-.field Input {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-.field Input:focus {{ border: tall {px.HOTPINK}; }}
-.field Input.-bad {{ border: tall {px.RED}; }}
-.field Switch {{ background: {px.DEEP}; border: tall {px.PURPLE}; }}
-.field Switch:focus {{ border: tall {px.HOTPINK}; }}
-.field Switch > .switch--slider {{ color: {px.SHADOW}; background: {px.PANEL}; }}
-.field Switch.-on > .switch--slider {{ color: {px.HOTPINK}; }}
+.field .help {{ color: $pd-dim; height: auto; }}
+.field Input {{ background: $pd-panel; border: tall $pd-purple; }}
+.field Input:focus {{ border: tall $pd-hotpink; }}
+.field Input.-bad {{ border: tall $pd-red; }}
+.field Switch {{ background: $pd-deep; border: tall $pd-purple; }}
+.field Switch:focus {{ border: tall $pd-hotpink; }}
+.field Switch > .switch--slider {{ color: $pd-shadow; background: $pd-panel; }}
+.field Switch.-on > .switch--slider {{ color: $pd-hotpink; }}
 .chips {{ height: auto; }}
-.chip {{ min-width: 4; height: 1; border: none; background: {px.SHADOW}; color: {px.INK}; margin: 0 1 0 0; }}
-.chip:hover, .chip:focus {{ background: {px.RED}; color: {px.VOID}; }}
+.chip {{ min-width: 4; height: 1; border: none; background: $pd-shadow; color: $pd-ink; margin: 0 1 0 0; }}
+.chip:hover, .chip:focus {{ background: $pd-red; color: $pd-void; }}
 .checks {{ height: auto; }}
-.checks Checkbox {{ background: {px.DEEP}; border: none; margin-right: 1; }}
+.checks Checkbox {{ background: $pd-deep; border: none; margin-right: 1; }}
 .actions {{ height: auto; margin-top: 1; }}
-#st-form Button {{ margin-right: 1; min-width: 12; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-#st-form Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
-#st-form Button.-error {{ background: {px.DEEP}; color: {px.RED}; border: tall {px.RED}; }}
-#st-form Button.chip {{ min-width: 4; height: 1; border: none; background: {px.SHADOW}; color: {px.INK}; margin: 0 1 0 0; }}
-#st-form Button.chip:hover, #st-form Button.chip:focus {{ background: {px.RED}; color: {px.VOID}; }}
-.envrow {{ height: auto; margin-top: 1; padding: 0 1; background: {px.DEEP}; }}
+#st-form Button {{ margin-right: 1; min-width: 12; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+#st-form Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
+#st-form Button.-error {{ background: $pd-deep; color: $pd-red; border: tall $pd-red; }}
+#st-form Button.chip {{ min-width: 4; height: 1; border: none; background: $pd-shadow; color: $pd-ink; margin: 0 1 0 0; }}
+#st-form Button.chip:hover, #st-form Button.chip:focus {{ background: $pd-red; color: $pd-void; }}
+.envrow {{ height: auto; margin-top: 1; padding: 0 1; background: $pd-deep; }}
 .envrow > Static {{ width: 1fr; padding-top: 1; }}
-EnvScreen {{ align: center middle; background: {px.VOID} 70%; }}
-EnvScreen > VerticalScroll {{ width: 96; height: auto; max-height: 90%; background: {px.DEEP}; border: panel {px.HOTPINK};
-                              border-title-color: {px.VOID}; border-title-style: bold; padding: 1 2; }}
+EnvScreen {{ align: center middle; background: $pd-void 70%; }}
+EnvScreen > VerticalScroll {{ width: 96; height: auto; max-height: 90%; background: $pd-deep; border: panel $pd-hotpink;
+                              border-title-color: $pd-void; border-title-style: bold; padding: 1 2; }}
 """
 
 
-def _txt(s: str, color: str = px.INK, bold: bool = False) -> Text:
-    return Text(s, Style(color=color, bold=bold))
+def _txt(s: str, color: str | None = None, bold: bool = False) -> Text:
+    return Text(s, Style(color=color or px.INK, bold=bold))
 
 
 # ── fields ───────────────────────────────────────────────────────────────────
@@ -245,21 +245,25 @@ class ChoiceField(Field):
 
 
 class ThemeField(Field):
-    """The theme list (each row drawn in its own colours). Enter applies one: PIXELDECK restarts,
-    because every screen builds its styles from the palette when it loads."""
+    """The theme list (each row drawn in its own colours). Moving through it tries each theme on
+    live; Enter keeps the highlighted one; leaving the list without Enter puts the saved one back."""
 
     def control(self) -> ComposeResult:
         from .profile import ThemeList
 
-        yield ThemeList(px.ACTIVE)
+        yield ThemeList(str(self.value or px.DEFAULT_THEME), revert_on_blur=True)
 
     def on_option_list_option_selected(self, e) -> None:
+        from .profile import ThemeList
+
         e.stop()
+        lst = self.query_one(ThemeList)
         key = e.option.id
-        if not key or key == px.ACTIVE:
+        if not key or key == lst.current:
             return
+        lst.mark(key)  # saved from here on, so leaving the list no longer reverts it
+        self.app.set_look(key)
         self.save(key)
-        self.app._restart(f"theme: {px.THEMES[key]['label']}")
 
 
 class ChecksField(Field):
@@ -409,7 +413,7 @@ RESET = {
 
 class SettingsScreen(Screen):
     CSS = SETTINGS_CSS + f"""
-    .field-label {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
+    .field-label {{ color: $pd-cyan; text-style: bold; margin-top: 1; }}
     """
     BINDINGS = [
         Binding("escape", "back", "Back"),
@@ -432,13 +436,22 @@ class SettingsScreen(Screen):
             yield Static(id="st-side")
         yield Footer()
 
-    def on_mount(self) -> None:
+    def _head(self) -> None:
         head = Text()
         head.append(" ⚙ SETTINGS ", Style(color=px.VOID, bgcolor=px.HOTPINK, bold=True))
         head.append(f"  {CONFIG_PATH}".replace(str(Path.home()), "~"), Style(color=px.DIM))
         head.append("\nchanges save as you make them · ctrl+z undo · ctrl+o open the file · esc back",
                     Style(color=px.DIM))
         self.query_one("#st-head", Static).update(head)
+
+    def restyle(self) -> None:
+        """The theme just changed under us: redraw what this screen drew in code."""
+        self._head()
+        self._nav()
+        self.run_worker(self._side(self.section), exclusive=True, group="side")
+
+    def on_mount(self) -> None:
+        self._head()
         self._nav()
         lst = self.query_one("#st-list", OptionList)
         lst.highlighted = lst.get_option_index(self.section)
@@ -454,7 +467,9 @@ class SettingsScreen(Screen):
         for key, name in SECTIONS:
             if key == "profile":
                 who = str(get_value("profile.name") or "").strip()
-                on_, note = bool(who), f"{who or 'not set'} · {px.THEMES[px.ACTIVE]['label'].lower()}"
+                # the saved theme, not the one being tried on
+                saved = px.THEMES.get(str(get_value("ui.theme")), px.THEMES[px.DEFAULT_THEME])
+                on_, note = bool(who), f"{who or 'not set'} · {saved['label'].lower()}"
             elif key == "mail":
                 on_, note = True, f"{len(get_value('mail.hide_from') or [])} hidden senders"
             elif key == "system":
@@ -538,6 +553,8 @@ class SettingsScreen(Screen):
             else:
                 set_value(path, old)
         self.notify(", ".join(p for p, _ in group), title="↶ UNDONE", timeout=2)
+        if any(p == "ui.theme" for p, _ in group):
+            self.app.set_look(str(get_value("ui.theme") or px.DEFAULT_THEME))
         self._nav()
         self._show(self.section)
 
@@ -589,7 +606,8 @@ class SettingsScreen(Screen):
                                                 "is outside your company", "you@company.com",
                       check=lambda v: None if not v or ("@" in v and " " not in v) else "that isn't an email address"),
             Sub("LOOK"),
-            ThemeField("ui.theme", "THEME", "↑ ↓ to look, Enter to use one (PIXELDECK restarts, about a second)"),
+            ThemeField("ui.theme", "THEME", "↑ ↓ tries each one on as you move · Enter keeps it · moving away without "
+                                            "Enter puts the saved one back"),
         ]
 
     def _form_github(self) -> list[Widget]:
@@ -1112,7 +1130,8 @@ class SettingsScreen(Screen):
             elif key == "profile":
                 who = str(get_value("profile.name") or "").strip()
                 side.append_text(_ok(f"hello, {who}") if who else _bad("no name yet"))
-                side.append(f"\n\ntheme: {px.THEMES[px.ACTIVE]['label']}", Style(color=px.INK))
+                saved = px.THEMES.get(str(get_value("ui.theme")), px.THEMES[px.DEFAULT_THEME])
+                side.append(f"\n\ntheme: {saved['label']}", Style(color=px.INK))
                 side.append("\n\nYour profile lives in config.toml on this Mac and goes nowhere else.",
                             Style(color=px.DIM))
         except Exception as exc:

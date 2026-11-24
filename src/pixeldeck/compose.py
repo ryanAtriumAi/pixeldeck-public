@@ -20,14 +20,14 @@ from . import pixel as px
 from .setup import SETUP_CSS, _bad, _busy, _ok
 
 COMPOSE_CSS = f"""
-ComposeScreen {{ align: center middle; background: {px.VOID} 70%; }}
+ComposeScreen {{ align: center middle; background: $pd-void 70%; }}
 ComposeScreen .box {{ width: 110; height: 85%; }}
 #c-head {{ height: auto; margin-bottom: 1; }}
-#c-body {{ height: 1fr; min-height: 6; background: {px.PANEL}; border: tall {px.PURPLE}; }}
-#c-body:focus {{ border: tall {px.HOTPINK}; }}
+#c-body {{ height: 1fr; min-height: 6; background: $pd-panel; border: tall $pd-purple; }}
+#c-body:focus {{ border: tall $pd-hotpink; }}
 #send {{ min-width: 24; }}
-#c-body > .text-area--suggestion {{ color: {px.HOTPINK} 55%; }}
-#c-quote {{ height: 7; color: {px.DIM}; background: {px.DEEP}; padding: 0 1; overflow-y: auto; }}
+#c-body > .text-area--suggestion {{ color: $pd-hotpink 55%; }}
+#c-quote {{ height: 7; color: $pd-dim; background: $pd-deep; padding: 0 1; overflow-y: auto; }}
 """
 
 

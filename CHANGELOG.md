@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 (2026-11-24)
+
+- **Live themes:** moving through the theme list (profile screen or Settings → Profile) restyles the
+  whole app as you go, with no restart. Enter or SAVE keeps one; `esc`, or leaving the list without
+  Enter, puts the saved one back. A theme set by hand in `config.toml` applies when the file is saved.
+- **Pages open with numbers:** a section page shows its last numbers at once and updates them in place
+  when its load finishes; the header says how old they are. Within a run the rows and side panel come
+  back too; across restarts only the card numbers and hints are kept (`pages-cache.json`). RELEASES
+  draws from what its tile already loaded, and the Linear page runs its three queries side by side.
+
 ## 0.4.1 (2026-11-24)
 
 - **Profile:** the first start without one asks for your name, an optional email and a theme. Your name

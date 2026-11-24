@@ -34,23 +34,23 @@ from .config import (
 )
 
 SETUP_CSS = f"""
-SetupMenu, FormScreen, OutlookScreen {{ align: center middle; background: {px.VOID} 70%; }}
+SetupMenu, FormScreen, OutlookScreen {{ align: center middle; background: $pd-void 70%; }}
 .box {{
     width: 92; max-width: 95%; height: auto; max-height: 90%;
-    background: {px.DEEP}; border: panel {px.HOTPINK};
-    border-title-color: {px.VOID}; border-title-style: bold; padding: 1 2;
+    background: $pd-deep; border: panel $pd-hotpink;
+    border-title-color: $pd-void; border-title-style: bold; padding: 1 2;
 }}
-.box OptionList {{ height: auto; max-height: 16; background: {px.DEEP}; border: none; }}
-.box OptionList > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
+.box OptionList {{ height: auto; max-height: 16; background: $pd-deep; border: none; }}
+.box OptionList > .option-list--option-highlighted {{ background: $pd-focus; }}
 .steps {{ margin-bottom: 1; }}
-.field-label {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
-.box Input {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-.box Input:focus {{ border: tall {px.HOTPINK}; }}
+.field-label {{ color: $pd-cyan; text-style: bold; margin-top: 1; }}
+.box Input {{ background: $pd-panel; border: tall $pd-purple; }}
+.box Input:focus {{ border: tall $pd-hotpink; }}
 .status {{ margin-top: 1; height: auto; }}
 .buttons {{ height: auto; margin-top: 1; align-horizontal: right; }}
 .buttons Button {{ margin-left: 1; min-width: 14; }}
-.box Button {{ background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-.box Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+.box Button {{ background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+.box Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 .box Button:focus {{ text-style: bold reverse; }}
 #code {{ height: auto; margin: 1 0; }}
 """
@@ -563,15 +563,15 @@ class OutlookScreen(ModalScreen[bool]):
 # ── GitHub repo picker ───────────────────────────────────────────────────────
 
 GH_CSS = f"""
-GitHubScreen {{ align: center middle; background: {px.VOID} 70%; }}
+GitHubScreen {{ align: center middle; background: $pd-void 70%; }}
 GitHubScreen .box {{ width: 120; height: 90%; }}
 #gh-filter {{ margin-bottom: 1; }}
 #gh-lists {{ height: 1fr; }}
 #gh-lists > Vertical {{ width: 1fr; height: 1fr; }}
 #gh-inbox-col {{ margin-left: 2; }}
-#gh-lists SelectionList {{ height: 1fr; background: {px.DEEP}; border: tall {px.PURPLE}; }}
-#gh-lists SelectionList:focus {{ border: tall {px.HOTPINK}; }}
-#gh-lists SelectionList > .selection-list--button-selected {{ color: {px.HOTPINK}; }}
+#gh-lists SelectionList {{ height: 1fr; background: $pd-deep; border: tall $pd-purple; }}
+#gh-lists SelectionList:focus {{ border: tall $pd-hotpink; }}
+#gh-lists SelectionList > .selection-list--button-selected {{ color: $pd-hotpink; }}
 """
 
 

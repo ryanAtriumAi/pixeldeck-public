@@ -16,20 +16,20 @@ from .config import get_value, set_value
 from .sources.chat import PRIORITY_NAMES
 
 FILTER_CSS = f"""
-LinearFilter {{ align: center middle; background: {px.VOID} 70%; }}
-LinearFilter > Vertical {{ width: 88; max-width: 95%; height: auto; max-height: 90%; background: {px.DEEP};
-                           border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+LinearFilter {{ align: center middle; background: $pd-void 70%; }}
+LinearFilter > Vertical {{ width: 88; max-width: 95%; height: auto; max-height: 90%; background: $pd-deep;
+                           border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                            padding: 1 2; }}
 LinearFilter .cols {{ height: auto; }}
 LinearFilter .col {{ width: 1fr; height: auto; }}
 LinearFilter .col + .col {{ margin-left: 2; }}
-LinearFilter .lbl {{ color: {px.CYAN}; text-style: bold; margin-top: 1; }}
-LinearFilter SelectionList {{ height: auto; max-height: 14; background: {px.DEEP}; border: tall {px.PURPLE}; }}
-LinearFilter SelectionList:focus {{ border: tall {px.HOTPINK}; }}
-LinearFilter Checkbox {{ background: {px.DEEP}; border: none; }}
+LinearFilter .lbl {{ color: $pd-cyan; text-style: bold; margin-top: 1; }}
+LinearFilter SelectionList {{ height: auto; max-height: 14; background: $pd-deep; border: tall $pd-purple; }}
+LinearFilter SelectionList:focus {{ border: tall $pd-hotpink; }}
+LinearFilter Checkbox {{ background: $pd-deep; border: none; }}
 LinearFilter .buttons {{ height: auto; margin-top: 1; align-horizontal: right; }}
-LinearFilter Button {{ margin-left: 1; min-width: 14; background: {px.PANEL}; color: {px.INK}; border: tall {px.PURPLE}; }}
-LinearFilter Button.-primary {{ background: {px.PINK}; color: {px.VOID}; border: tall {px.HOTPINK}; text-style: bold; }}
+LinearFilter Button {{ margin-left: 1; min-width: 14; background: $pd-panel; color: $pd-ink; border: tall $pd-purple; }}
+LinearFilter Button.-primary {{ background: $pd-pink; color: $pd-void; border: tall $pd-hotpink; text-style: bold; }}
 """
 
 
@@ -109,18 +109,18 @@ class LinearFilter(ModalScreen[bool]):
 # ── search ───────────────────────────────────────────────────────────────────
 
 SEARCH_CSS = f"""
-LinearSearch {{ align: center top; background: {px.VOID} 70%; }}
-LinearSearch > Vertical {{ width: 120; max-width: 96%; height: 90%; margin-top: 2; background: {px.DEEP};
-                           border: panel {px.HOTPINK}; border-title-color: {px.VOID}; border-title-style: bold;
+LinearSearch {{ align: center top; background: $pd-void 70%; }}
+LinearSearch > Vertical {{ width: 120; max-width: 96%; height: 90%; margin-top: 2; background: $pd-deep;
+                           border: panel $pd-hotpink; border-title-color: $pd-void; border-title-style: bold;
                            padding: 1 2; }}
-LinearSearch #ls-q {{ background: {px.PANEL}; border: tall {px.PURPLE}; }}
-LinearSearch #ls-q:focus {{ border: tall {px.HOTPINK}; }}
+LinearSearch #ls-q {{ background: $pd-panel; border: tall $pd-purple; }}
+LinearSearch #ls-q:focus {{ border: tall $pd-hotpink; }}
 LinearSearch .toggles {{ height: auto; margin-top: 1; }}
-LinearSearch Checkbox {{ background: {px.DEEP}; border: none; margin-right: 2; }}
+LinearSearch Checkbox {{ background: $pd-deep; border: none; margin-right: 2; }}
 LinearSearch #ls-status {{ height: 1; margin: 1 0 0 1; }}
-LinearSearch #ls-results {{ height: 1fr; background: {px.DEEP}; border: none; margin-top: 1; }}
-LinearSearch #ls-results > .option-list--option-highlighted {{ background: {px.SELECT}; }}
-LinearSearch #ls-results:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
+LinearSearch #ls-results {{ height: 1fr; background: $pd-deep; border: none; margin-top: 1; }}
+LinearSearch #ls-results > .option-list--option-highlighted {{ background: $pd-select; }}
+LinearSearch #ls-results:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
 LinearSearch #ls-help {{ height: 1; }}
 """
 
@@ -171,8 +171,8 @@ class LinearSearch(ModalScreen[None]):
 
     # searching ---------------------------------------------------------------
 
-    def _status(self, text: str, color: str = px.DIM) -> None:
-        self.query_one("#ls-status", Static).update(Text(text, Style(color=color)))
+    def _status(self, text: str, color: str | None = None) -> None:
+        self.query_one("#ls-status", Static).update(Text(text, Style(color=color or px.DIM)))
 
     def on_input_changed(self, e) -> None:
         if getattr(e.input, "id", None) != "ls-q":

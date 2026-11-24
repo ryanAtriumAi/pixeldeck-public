@@ -76,7 +76,7 @@ def main() -> None:
         Outlook(load_config()["outlook"]).login()
         sys.exit(0)
 
-    # the theme first: every screen builds its styles from the palette when it is imported
+    # the theme first, so the very first frame is drawn in it (switching later is live: PixelDeck.set_look)
     from . import pixel
 
     try:

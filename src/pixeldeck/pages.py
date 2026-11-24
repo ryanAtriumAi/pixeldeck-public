@@ -3,13 +3,19 @@
 A page is a strip of metric cards, the list for the card you picked, and a side panel of charts.
 Picking a card (←/→, its number, or a click) lists what that number counts; Enter on a row opens it
 in a popup. A subclass says what the cards are (`skeleton`, `fetch`) and what the side panel shows.
+
+A page never opens empty when it has been loaded before: the last load of this run is kept in memory
+(cards, rows and the state named in STATE) and shown at once; failing that, the numbers alone from
+pages-cache.json (values and hints, never rows or any text from them). The fetch then replaces them.
 """
 
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from rich.style import Style
 from rich.text import Text
@@ -23,6 +29,7 @@ from textual.widgets import Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
 from . import pixel as px
+from .config import CONFIG_DIR
 from .sources.base import Item, NotConfigured, is_network_error
 from .widgets import TextInput, render_item
 
@@ -52,13 +59,50 @@ class Card:
         return [r for r in self.rows or [] if isinstance(r, Item)]
 
 
+# ── the numbers kept on disk ────────────────────────────────────────────────────
+
+CACHE_PATH = CONFIG_DIR / "pages-cache.json"  # {page: {"at": epoch, "cards": {card: [value, hint]}}}
+
+
+def disk_numbers() -> dict:
+    try:
+        data = json.loads(CACHE_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_numbers(page: str, at: float, cards: list[Card]) -> None:
+    """Keep a page's card numbers for the next start. Values and hints only: nothing listed under them."""
+    data = disk_numbers()
+    data[page] = {"at": round(at), "cards": {c.key: [c.value, c.hint] for c in cards if c.value}}
+    try:
+        CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = CACHE_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data))
+        os.chmod(tmp, 0o600)
+        tmp.replace(CACHE_PATH)
+    except OSError:
+        pass  # a cache: losing it only means empty cards next time
+
+
+def age(secs: float) -> str:
+    s = max(int(secs), 0)
+    return f"{s}s" if s < 60 else f"{s // 60}m" if s < 3600 else f"{s // 3600}h" if s < 86400 else f"{s // 86400}d"
+
+
+def _copy(cards: list[Card]) -> list[Card]:
+    """New card objects and row lists (the rows themselves are shared), so one page's edits don't reach another."""
+    return [replace(c, rows=None if c.rows is None else list(c.rows)) for c in cards]
+
+
 # ── drawing helpers for side panels ─────────────────────────────────────────────
 
 SPARKS = "▁▂▃▄▅▆▇█"
 
 
-def heading(text: str, color: str = px.CYAN) -> Text:
-    return Text(f"{text}\n", Style(color=color, bold=True))
+def heading(text: str, color: str | None = None) -> Text:
+    return Text(f"{text}\n", Style(color=color or px.CYAN, bold=True))
 
 
 def hbar(label: str, value: int, peak: int, width: int, color: str, label_w: int = 11) -> Text:
@@ -87,10 +131,10 @@ def spark(label: str, values: list[int], color: str, peak: int | None = None, la
     return out
 
 
-def kv(label: str, value: str, color: str = px.INK, label_w: int = 14) -> Text:
+def kv(label: str, value: str, color: str | None = None, label_w: int = 14) -> Text:
     out = Text(no_wrap=True)
     out.append(f"{label[:label_w]:<{label_w}} ", Style(color=px.DIM))
-    out.append(f"{value}\n", Style(color=color, bold=True))
+    out.append(f"{value}\n", Style(color=color or px.INK, bold=True))
     return out
 
 
@@ -132,33 +176,33 @@ class CardBox(Static):
 
 
 PAGE_CSS = f"""
-SectionScreen {{ background: {px.VOID}; }}
-#pg-head {{ height: auto; background: {px.DEEP}; padding: 1 2 0 2; }}
+SectionScreen {{ background: $pd-void; }}
+#pg-head {{ height: auto; background: $pd-deep; padding: 1 2 0 2; }}
 #pg-rule {{ height: 1; }}
-#pg-cards {{ height: 5; padding: 0 1; background: {px.VOID}; }}
-.pg-card {{ width: 1fr; min-width: 12; height: 5; padding: 0 1; background: {px.DEEP}; border: round {px.PURPLE};
-            border-title-color: {px.INK}; border-subtitle-color: {px.DIM}; text-align: center; }}
-.pg-card:hover {{ background: {px.PANEL}; }}
-.pg-card.-flat {{ border: round {px.SHADOW}; border-title-color: {px.DIM}; }}
-.pg-card.-flat:hover {{ background: {px.DEEP}; }}
-.pg-card.-on {{ border: heavy {px.HOTPINK}; background: {px.PANEL}; border-title-color: {px.HOTPINK};
-                border-title-style: bold; border-subtitle-color: {px.INK}; }}
+#pg-cards {{ height: 5; padding: 0 1; background: $pd-void; }}
+.pg-card {{ width: 1fr; min-width: 12; height: 5; padding: 0 1; background: $pd-deep; border: round $pd-purple;
+            border-title-color: $pd-ink; border-subtitle-color: $pd-dim; text-align: center; }}
+.pg-card:hover {{ background: $pd-panel; }}
+.pg-card.-flat {{ border: round $pd-shadow; border-title-color: $pd-dim; }}
+.pg-card.-flat:hover {{ background: $pd-deep; }}
+.pg-card.-on {{ border: heavy $pd-hotpink; background: $pd-panel; border-title-color: $pd-hotpink;
+                border-title-style: bold; border-subtitle-color: $pd-ink; }}
 #pg-body {{ height: 1fr; padding: 0 1; }}
 #pg-left {{ width: 1fr; height: 1fr; }}
-#pg-filter {{ display: none; height: 3; border: tall {px.HOTPINK}; background: {px.DEEP}; }}
+#pg-filter {{ display: none; height: 3; border: tall $pd-hotpink; background: $pd-deep; }}
 #pg-filter.-on {{ display: block; }}
-#pg-list {{ height: 1fr; background: {px.DEEP}; border: panel {px.PURPLE}; border-title-color: {px.VOID};
-            border-title-style: bold; border-subtitle-color: {px.DIM}; padding: 0; scrollbar-size-vertical: 1;
-            scrollbar-color: {px.PURPLE}; scrollbar-color-hover: {px.HOTPINK}; scrollbar-background: {px.DEEP}; }}
-#pg-list:focus {{ border: panel {px.HOTPINK}; }}
+#pg-list {{ height: 1fr; background: $pd-deep; border: panel $pd-purple; border-title-color: $pd-void;
+            border-title-style: bold; border-subtitle-color: $pd-dim; padding: 0; scrollbar-size-vertical: 1;
+            scrollbar-color: $pd-purple; scrollbar-color-hover: $pd-hotpink; scrollbar-background: $pd-deep; }}
+#pg-list:focus {{ border: panel $pd-hotpink; }}
 #pg-list > .option-list--option {{ padding: 0 1; }}
-#pg-list > .option-list--option-highlighted {{ background: {px.SHADOW}; }}
-#pg-list:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-#pg-list > .option-list--option-hover {{ background: {px.PANEL}; }}
-#pg-list > .option-list--separator {{ color: {px.SHADOW}; }}
-#pg-side {{ width: 48; height: 1fr; margin-left: 1; background: {px.DEEP}; border: panel {px.CYAN};
-            border-title-color: {px.VOID}; border-title-style: bold; padding: 0 1; scrollbar-size-vertical: 1;
-            scrollbar-color: {px.PURPLE}; }}
+#pg-list > .option-list--option-highlighted {{ background: $pd-shadow; }}
+#pg-list:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+#pg-list > .option-list--option-hover {{ background: $pd-panel; }}
+#pg-list > .option-list--separator {{ color: $pd-shadow; }}
+#pg-side {{ width: 48; height: 1fr; margin-left: 1; background: $pd-deep; border: panel $pd-cyan;
+            border-title-color: $pd-void; border-title-style: bold; padding: 0 1; scrollbar-size-vertical: 1;
+            scrollbar-color: $pd-purple; }}
 """
 
 
@@ -172,6 +216,7 @@ class SectionScreen(Screen):
     SIDE_TITLE = "AT A GLANCE"
     SIDE_FOLLOWS = False  # redraw the side panel when the highlighted row changes (a preview)
     NARROW = 112  # below this width the side panel hides
+    STATE: tuple[str, ...] = ()  # attributes the cards and side panel are drawn from: kept with the cards
 
     BINDINGS = [
         Binding("escape,q", "back", "Back"),
@@ -191,7 +236,10 @@ class SectionScreen(Screen):
         self.shown: list[Item] = []  # the items listed right now, in order
         self.needle = ""
         self.busy = False
-        self.loaded_at: float | None = None
+        self.loaded_at: float | None = None  # monotonic: when this page's own fetch last finished
+        self.synced_at: float | None = None  # the same, as epoch seconds (what the caches record)
+        self.shown_at: float | None = None  # epoch of the cached numbers shown before the first fetch
+        self.rows_ready = False  # False while the cards hold numbers only (from disk) or nothing yet
         self.error: str | None = None
         self._boxes: list[CardBox] = []
 
@@ -204,6 +252,19 @@ class SectionScreen(Screen):
     async def fetch(self) -> list[Card]:
         """Load everything and return the cards. Raise to show the error in the header."""
         raise NotImplementedError
+
+    def on_disk(self, card: Card) -> bool:
+        """Whether this card's number is kept in pages-cache.json for the next start."""
+        return bool(card.value)
+
+    def instant(self) -> tuple[list[Card], float] | None:
+        """Cards drawn from what the dashboard already holds (no network call), and when (epoch) that
+        was loaded. None: use the page cache."""
+        return None
+
+    @property
+    def cache_key(self) -> str:
+        return self.NAME.lower()
 
     def side(self, width: int) -> Text | None:
         """The side panel, `width` columns wide. None hides nothing but leaves it blank."""
@@ -239,12 +300,63 @@ class SectionScreen(Screen):
         self.query_one("#pg-side", VerticalScroll).border_title = f" {self.SIDE_TITLE} "
         self.query_one("#pg-side", VerticalScroll).can_focus = False
         self._fit()
-        self.set_cards(self.skeleton())
+        self.set_cards(self._first_cards())
         self.query_one("#pg-list", OptionList).focus()
         self.reload()
         if self.REFRESH:
             self.set_interval(self.REFRESH, self.reload)
         self.set_interval(5, self._draw_head)
+
+    def _first_cards(self) -> list[Card]:
+        """Before the first fetch: the dashboard's own data, else this run's last load, else the numbers
+        kept on disk, else empty cards."""
+        try:
+            got = self.instant()
+        except Exception:  # a best effort: the fetch still runs
+            got = None
+        if got:
+            cards, self.shown_at = got
+            self.rows_ready = True
+            return cards
+        if hit := self.app.page_cache.get(self.cache_key):
+            for name, value in hit["state"].items():
+                setattr(self, name, value)
+            self.shown_at, self.rows_ready = hit["at"], True
+            return _copy(hit["cards"])
+        cards = self.skeleton()
+        saved = disk_numbers().get(self.cache_key)
+        if isinstance(saved, dict) and isinstance(saved.get("at"), (int, float)):
+            numbers = saved.get("cards") or {}
+            for c in cards:
+                if isinstance(got := numbers.get(c.key), list) and len(got) == 2:
+                    c.value, c.hint = str(got[0]), str(got[1])
+            if any(c.value for c in cards):
+                self.shown_at = float(saved["at"])
+        return cards
+
+    def remember(self, cards: list[Card], disk: bool = False) -> None:
+        """Keep this load for the next time the page opens (in memory: cards, rows and STATE)."""
+        if self.synced_at is None:
+            return
+        self.app.page_cache[self.cache_key] = {
+            "at": self.synced_at, "cards": _copy(cards), "state": {n: getattr(self, n) for n in self.STATE}}
+        if disk:
+            save_numbers(self.cache_key, self.synced_at, [c for c in cards if self.on_disk(c)])
+
+    def on_unmount(self) -> None:
+        try:  # changes made here since the fetch (an email deleted, a ticket opened) go with it
+            self.remember(self.cards)
+        except Exception:
+            pass
+
+    def restyle(self) -> None:
+        """The theme just changed under us: redraw what this page drew in code."""
+        self._draw_head()
+        self._paint_cards()
+        self._fill_list()
+        self.draw_side()
+        for w in self.query("#pg-rule"):
+            w.refresh()
 
     def _fit(self) -> None:
         """The side panel only shows when there's room for it beside the list."""
@@ -274,14 +386,18 @@ class SectionScreen(Screen):
         out.append(f" {self._tile_num()}{self.NAME} ", Style(color=px.VOID, bgcolor=px.HOTPINK, bold=True))
         if note := self.note():
             out.append(f"  {note}", Style(color=px.INK))
+        cached = f"numbers from {age(time.time() - self.shown_at)} ago" if self.shown_at is not None else ""
         if self.error:
             out.append(f"  ⚠ {self.error}", Style(color=px.RED, bold=True))
-        elif self.busy and self.loaded_at is None:
-            out.append("  loading…", Style(color=px.DIM))
+            if cached and self.loaded_at is None:
+                out.append(f" · {cached}", Style(color=px.DIM))
         elif self.loaded_at is not None:
-            secs = int(time.monotonic() - self.loaded_at)
-            age = f"{secs}s" if secs < 60 else f"{secs // 60}m"
-            out.append(f"  {'syncing…' if self.busy else 'synced ' + age + ' ago'}", Style(color=px.DIM))
+            when = "syncing…" if self.busy else f"synced {age(time.monotonic() - self.loaded_at)} ago"
+            out.append(f"  {when}", Style(color=px.DIM))
+        elif cached:
+            out.append(f"  {cached}{' · updating…' if self.busy else ''}", Style(color=px.DIM))
+        elif self.busy:
+            out.append("  loading…", Style(color=px.DIM))
         self.query_one("#pg-head", Static).update(out)
 
     # data -----------------------------------------------------------------------
@@ -297,10 +413,14 @@ class SectionScreen(Screen):
         except Exception as exc:  # a page shows what went wrong and keeps what it had
             self.error = "offline · will retry" if is_network_error(exc) else f"{type(exc).__name__}: {exc}"[:160]
         else:
+            self.synced_at = time.time()
+            self.remember(cards, disk=True)  # even when the page was closed mid-load: the next open uses it
             if self.gone():
                 return
             self.error = None
             self.loaded_at = time.monotonic()
+            self.shown_at = None
+            self.rows_ready = True
             self.set_cards(cards)
         finally:
             self.busy = False
@@ -387,7 +507,7 @@ class SectionScreen(Screen):
             if row.rule_after:
                 options.append(None)
         if not self.shown:
-            if card is None or (not card.value and self.loaded_at is None):
+            if card is None or not self.rows_ready:
                 msg, color = "  ▒▒▒ LOADING ▒▒▒", px.DIM
             elif words:
                 msg, color = f"  nothing matches “{self.needle}”", px.DIM
@@ -395,7 +515,8 @@ class SectionScreen(Screen):
                 msg, color = f"  ★ {card.empty} ★", px.CYAN
             options = [Option(Text(msg, Style(color=color, bold=color != px.DIM)), disabled=True)]
         lst.set_options(options)
-        lst.border_title = f" {card.label} ×{len(self.shown)} " if card else " … "
+        count = f"×{len(self.shown)} " if self.rows_ready else ""  # no count while the rows are still coming
+        lst.border_title = f" {card.label} {count}" if card else " … "
         lst.border_subtitle = f" / {self.needle} " if words else ""
         index = next((i for i, it in enumerate(self.shown) if keep and self.item_key(it) == keep), 0)
         if self.shown:

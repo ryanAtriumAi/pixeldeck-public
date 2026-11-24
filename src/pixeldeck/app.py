@@ -37,34 +37,33 @@ from .sources.system import System, docker_summary, repo_status
 from .updater import Updater, restart
 from .widgets import render_item
 
-THEME = Theme(
-    name="pixeldeck",
-    primary=px.PURPLE,
-    secondary=px.CYAN,
-    accent=px.HOTPINK,
-    warning=px.YELLOW,
-    error=px.RED,
-    success=px.CYAN,
-    foreground=px.INK,
-    background=px.VOID,
-    surface=px.DEEP,
-    panel=px.PANEL,
-    dark=px.DARK,
-    variables={  # Markdown on detail pages (Linear tickets, PRs, issues)
-        "markdown-h1-color": px.HOTPINK, "markdown-h1-text-style": "bold", "markdown-h1-background": "transparent",
-        "markdown-h2-color": px.CYAN, "markdown-h2-text-style": "bold", "markdown-h2-background": "transparent",
-        "markdown-h3-color": px.VIOLET, "markdown-h3-text-style": "bold",
-        "markdown-h4-color": px.INK, "markdown-h4-text-style": "bold underline",
-        "markdown-h5-color": px.INK, "markdown-h6-color": px.DIM,
-        "link-color": px.CYAN, "link-style": "underline", "link-color-hover": px.HOTPINK,
-        "link-background-hover": px.SHADOW,
-    },
-)
+def look(key: str) -> Theme:
+    """One PIXELDECK theme as a Textual theme: the palette as $pd-… variables for every stylesheet,
+    plus the colours Textual's own widgets and Markdown use."""
+    t = px.THEMES[key]
+    return Theme(
+        name=f"pixeldeck-{key}",
+        primary=t["PURPLE"], secondary=t["CYAN"], accent=t["HOTPINK"], warning=t["YELLOW"], error=t["RED"],
+        success=t["CYAN"], foreground=t["INK"], background=t["VOID"], surface=t["DEEP"], panel=t["PANEL"],
+        dark=t["dark"],
+        variables={
+            **px.css_vars(key),
+            # Markdown on detail pages (Linear tickets, PRs, issues)
+            "markdown-h1-color": t["HOTPINK"], "markdown-h1-text-style": "bold", "markdown-h1-background": "transparent",
+            "markdown-h2-color": t["CYAN"], "markdown-h2-text-style": "bold", "markdown-h2-background": "transparent",
+            "markdown-h3-color": t["VIOLET"], "markdown-h3-text-style": "bold",
+            "markdown-h4-color": t["INK"], "markdown-h4-text-style": "bold underline",
+            "markdown-h5-color": t["INK"], "markdown-h6-color": t["DIM"],
+            "link-color": t["CYAN"], "link-style": "underline", "link-color-hover": t["HOTPINK"],
+            "link-background-hover": t["SHADOW"],
+        },
+    )
+
 
 CSS = f"""
-Screen {{ background: {px.VOID}; }}
+Screen {{ background: $pd-void; }}
 
-#header {{ height: 4; background: {px.DEEP}; padding: 0 1; }}
+#header {{ height: 4; background: $pd-deep; padding: 0 1; }}
 #sprite {{ width: 13; padding: 0 1; }}
 #logo {{ width: auto; padding: 0 2 0 1; }}
 #hud {{ width: 1fr; content-align: center middle; }}
@@ -84,7 +83,7 @@ Screen {{ background: {px.VOID}; }}
 /* GitHub inbox is a short scroller; RELEASES below it takes the rest of the column */
 #notifs.fill {{ height: 10; min-height: 6; }}
 #releases.fit {{ height: 1fr; min-height: 8; max-height: 100%; }}
-OptionList.tile#releases > .option-list--separator {{ color: {px.PURPLE} 70%; }}
+OptionList.tile#releases > .option-list--separator {{ color: $pd-purple 70%; }}
 /* Slack gets the bigger share of the comms column */
 #mail.fill {{ height: 2fr; }}
 #slack.fill {{ height: 3fr; }}
@@ -102,39 +101,39 @@ OptionList.tile#releases > .option-list--separator {{ color: {px.PURPLE} 70%; }}
 .-narrow #system {{ height: 8; }}
 
 .tile {{
-    background: {px.DEEP};
-    border: panel {px.PURPLE};
-    border-title-color: {px.VOID};
+    background: $pd-deep;
+    border: panel $pd-purple;
+    border-title-color: $pd-void;
     border-title-style: bold;
-    border-subtitle-color: {px.DIM};
+    border-subtitle-color: $pd-dim;
     padding: 0 0;
     height: 1fr;
     scrollbar-size-vertical: 1;
-    scrollbar-color: {px.PURPLE};
-    scrollbar-color-hover: {px.HOTPINK};
-    scrollbar-background: {px.DEEP};
+    scrollbar-color: $pd-purple;
+    scrollbar-color-hover: $pd-hotpink;
+    scrollbar-background: $pd-deep;
 }}
-.tile.blue {{ border: panel {px.BLUE}; }}
-.tile.pink {{ border: panel {px.PINK}; }}
-.tile.cyan {{ border: panel {px.CYAN}; }}
-.tile:focus {{ border: panel {px.HOTPINK}; background: {px.PANEL}; }}
-.tile.error {{ border-subtitle-color: {px.RED}; }}
+.tile.blue {{ border: panel $pd-blue; }}
+.tile.pink {{ border: panel $pd-pink; }}
+.tile.cyan {{ border: panel $pd-cyan; }}
+.tile:focus {{ border: panel $pd-hotpink; background: $pd-panel; }}
+.tile.error {{ border-subtitle-color: $pd-red; }}
 
 OptionList.tile > .option-list--option {{ padding: 0 1; }}
-OptionList.tile > .option-list--option-highlighted {{ background: {px.SHADOW}; }}
-OptionList.tile:focus > .option-list--option-highlighted {{ background: {px.FOCUS}; }}
-OptionList.tile > .option-list--option-hover {{ background: {px.PANEL}; }}
-OptionList.tile > .option-list--option-disabled {{ color: {px.DIM}; }}
-OptionList.tile > .option-list--separator {{ color: {px.SHADOW}; }}
+OptionList.tile > .option-list--option-highlighted {{ background: $pd-shadow; }}
+OptionList.tile:focus > .option-list--option-highlighted {{ background: $pd-focus; }}
+OptionList.tile > .option-list--option-hover {{ background: $pd-panel; }}
+OptionList.tile > .option-list--option-disabled {{ color: $pd-dim; }}
+OptionList.tile > .option-list--separator {{ color: $pd-shadow; }}
 
-Footer {{ background: {px.DEEP}; }}
-Footer > .footer--key {{ background: {px.PINK}; color: {px.VOID}; }}
-Footer FooterKey .footer-key--key {{ background: {px.PINK}; color: {px.VOID}; text-style: bold; }}
-Footer FooterKey .footer-key--description {{ color: {px.INK}; }}
+Footer {{ background: $pd-deep; }}
+Footer > .footer--key {{ background: $pd-pink; color: $pd-void; }}
+Footer FooterKey .footer-key--key {{ background: $pd-pink; color: $pd-void; text-style: bold; }}
+Footer FooterKey .footer-key--description {{ color: $pd-ink; }}
 
-Toast {{ background: {px.PANEL}; border-left: outer {px.HOTPINK}; }}
+Toast {{ background: $pd-panel; border-left: outer $pd-hotpink; }}
 
-SplashScreen {{ background: {px.VOID}; align: center middle; }}
+SplashScreen {{ background: $pd-void; align: center middle; }}
 #splash {{ width: auto; height: auto; text-align: center; }}
 """
 
@@ -200,14 +199,14 @@ class Hud(Static):
     """Headline counters as 8-bit chips plus sync state."""
 
     CHIPS = [
-        ("reviews", "◆", "REVIEWS", px.PINK),
-        ("mail", "✉", "UNREAD", px.BLUE),
-        ("slack", "✦", "PINGS", px.PURPLE),
-        ("linear", "▶", "ACTIVE", px.CYAN),
-        ("releases", "▲", "TO SHIP", px.HOTPINK),
-        ("ci", "✖", "CI FAIL", px.RED),
-        ("update", "⬆", "UPDATE · U", px.YELLOW),
-    ]
+        ("reviews", "◆", "REVIEWS", "PINK"),
+        ("mail", "✉", "UNREAD", "BLUE"),
+        ("slack", "✦", "PINGS", "PURPLE"),
+        ("linear", "▶", "ACTIVE", "CYAN"),
+        ("releases", "▲", "TO SHIP", "HOTPINK"),
+        ("ci", "✖", "CI FAIL", "RED"),
+        ("update", "⬆", "UPDATE · U", "YELLOW"),
+    ]  # palette slots, read when drawn (the theme can change)
 
     def on_mount(self) -> None:
         self.counts: dict[str, int | None] = {}
@@ -223,7 +222,8 @@ class Hud(Static):
 
     def refresh_hud(self) -> None:
         line = Text(no_wrap=True, justify="center")
-        for key, icon, label, color in self.CHIPS:
+        for key, icon, label, slot in self.CHIPS:
+            color = getattr(px, slot)
             val = self.counts.get(key)
             if val is None:
                 continue
@@ -304,6 +304,7 @@ class Tile(OptionList):
 
     def set_feed(self, feed: Feed) -> None:
         self.feed = feed
+        self._problem = None
         self.problem_in_settings = False
         self._build(feed)
         self.updated = time.monotonic()
@@ -391,6 +392,7 @@ class Tile(OptionList):
     def set_problem(self, message: str, setup: bool, settings: bool = False) -> None:
         """setup: Enter fixes it. settings: in Settings (a choice that can't work), not by connecting."""
         self.feed = None
+        self._problem = (message, setup, settings)  # redrawn as it is when the theme changes
         self.problem_in_settings = settings
         self._set_title(None)
         self.urls.clear()
@@ -841,6 +843,7 @@ class PixelDeck(App):
         self.system = System()
         self.updater = Updater()
         self.restart_note: str | None = None
+        self.page_cache: dict[str, dict] = {}  # a section page's last load, shown at once when it opens again
         self.llm_loading: tuple[str, float] | None = None
         self.jobs: dict[str, Callable[[], Awaitable[None]]] = {}
         self._seen_reviews: set[str] | None = None
@@ -928,8 +931,9 @@ class PixelDeck(App):
                 t.set_class(fills_idle and t.has_class("fit") and not t.has_class("-slim"), "-grow")
 
     def on_mount(self) -> None:
-        self.register_theme(THEME)
-        self.theme = "pixeldeck"
+        for key in px.THEMES:
+            self.register_theme(look(key))
+        self.theme = f"pixeldeck-{px.ACTIVE}"
         if self.splash:
             self.push_screen(SplashScreen(), lambda _=None: self._ask_profile())
         else:
@@ -968,6 +972,32 @@ class PixelDeck(App):
         if self.assist.enabled:
             self.run_worker(self.assist.warm(), group="assist-warm")
 
+    # look ------------------------------------------------------------------------
+
+    def get_theme_variable_defaults(self) -> dict[str, str]:
+        """The stylesheets are parsed before our theme is switched on: give $pd-… a value until then."""
+        return px.css_vars(px.ACTIVE)
+
+    def set_look(self, key: str | None) -> None:
+        """Switch theme right now, no restart. Stylesheets follow the Textual theme; whatever is
+        drawn in code (tile rows, header, meters, the open screens) is redrawn in the new colours."""
+        if key not in px.THEMES or key == px.ACTIVE:
+            return
+        px.apply_theme(key)
+        self.theme = f"pixeldeck-{key}"
+        for tile in self.query(Tile):
+            if tile.feed is not None:
+                tile._build(tile.feed)
+            elif getattr(tile, "_problem", None):
+                tile.set_problem(*tile._problem)
+        for hud in self.query(Hud):
+            hud.refresh_hud()
+        for w in (*self.query(Vitals), *self.query(Divider)):
+            w.refresh()
+        for screen in self.screen_stack:
+            if restyle := getattr(screen, "restyle", None):
+                restyle()
+
     # profile ---------------------------------------------------------------------
 
     def _name_player(self) -> None:
@@ -986,19 +1016,16 @@ class PixelDeck(App):
             return
         fresh = not CONFIG_PATH.exists()  # a brand-new install: connecting accounts comes next
 
-        def done(result: dict | None) -> None:
-            if result is None:
+        def done(result: bool | None) -> None:
+            if not result:
                 return  # "later": it asks again next start
             self.cfg = load_config()
             self._build_sources()
             self._name_player()
-            restyle = lambda _=None: self._restart("theme changed") if result["theme"] else None
             if fresh:
-                self.push_screen(SetupMenu(), restyle)
+                self.push_screen(SetupMenu())
             else:
-                restyle()
-                if not result["theme"]:
-                    self.notify("saved · change it any time in Settings → Profile", title="★ PROFILE", timeout=5)
+                self.notify("saved · change it any time in Settings → Profile", title="★ PROFILE", timeout=5)
 
         self.push_screen(ProfileScreen(fresh, guess(self.outlook)), done)
 
@@ -1715,6 +1742,10 @@ class PixelDeck(App):
             except Exception as exc:  # a half-edited config keeps the old one running
                 self.notify(str(exc)[:200], title="⚠ CONFIG DIDN'T PARSE", severity="error", timeout=8)
             else:
+                from .profile import ThemeList
+
+                if not isinstance(self.focused, ThemeList):  # not while a theme is being tried on
+                    self.set_look(self.cfg["ui"].get("theme"))  # a theme set by hand in the file
                 for name in self.jobs:
                     self._run(name)
                 self.notify("config.toml changed, re-syncing", title="⚙ CONFIG", timeout=3)
