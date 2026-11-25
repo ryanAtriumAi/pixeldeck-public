@@ -141,20 +141,48 @@ SplashScreen {{ background: $pd-void; align: center middle; }}
 # ── Header widgets ───────────────────────────────────────────────────────────
 
 
+def _snowfall() -> dict[tuple[int, int], str] | None:
+    """The header's flakes right now, or None when the theme has no snow."""
+    if not px.extra("snow"):
+        return None
+    from textual import active_app
+
+    try:
+        width = active_app.get().size.width
+    except Exception:
+        return None
+    return px.snow(width, time.monotonic())
+
+
 class Sprite(Static):
+    """The header mascot: the invader, or the theme's own (a tree at Christmas). Drawn each frame, so it
+    follows the theme and the snow can fall past it."""
+
     def __init__(self, frames: list[list[str]], fps: float = 2, **kw) -> None:
         super().__init__(**kw)
-        self.frames = [px.render(px.sprite_grid(f)) for f in frames]
+        self.default = frames
         self.i = 0
         self.fps = fps
 
+    @property
+    def frames(self) -> list[list[str]]:
+        return {"tree": px.TREE}.get(px.extra("sprite"), self.default)
+
     def on_mount(self) -> None:
-        self.update(self.frames[0])
+        self.draw()
         self.set_interval(1 / self.fps, self._tick)
 
     def _tick(self) -> None:
-        self.i = (self.i + 1) % len(self.frames)
-        self.update(self.frames[self.i])
+        self.i += 1
+        self.draw()
+
+    def draw(self) -> None:
+        frames = self.frames
+        grid = px.sprite_grid(frames[self.i % len(frames)])
+        grid += [[None] * len(grid[0]) for _ in range(px.SNOW_H - len(grid))]  # room for snow under short sprites
+        if (flakes := _snowfall()) is not None:
+            px.dust(grid, flakes, self.content_region.x)
+        self.update(px.render(grid))
 
 
 class Logo(Static):
@@ -170,7 +198,12 @@ class Logo(Static):
         self._draw()
 
     def _draw(self) -> None:
-        logo = px.render(px.text_grid("PIXELDECK", shift=self.shift))
+        grid = px.text_grid("PIXELDECK", shift=self.shift)
+        if px.extra("logo") == "candy":
+            px.candy(grid, time.monotonic())
+        if (flakes := _snowfall()) is not None:
+            px.dust(grid, flakes, self.content_region.x)
+        logo = px.render(grid)
         logo.append("\n")
         logo.append(" ▸ P1 ", Style(color=px.VOID, bgcolor=px.HOTPINK, bold=True))
         logo.append(f" {self.player} ", Style(color=px.INK, bold=True))
@@ -188,7 +221,10 @@ class Clock(Static):
     def _draw(self) -> None:
         now = datetime.now()
         colon = ":" if now.second % 2 == 0 else " "
-        big = px.render(px.text_grid(f"{now:%H}{colon}{now:%M}", shadow=True, stops=[px.CYAN, px.PURPLE, px.HOTPINK]))
+        grid = px.text_grid(f"{now:%H}{colon}{now:%M}", shadow=True, stops=[px.CYAN, px.PURPLE, px.HOTPINK])
+        if (flakes := _snowfall()) is not None:
+            px.dust(grid, flakes, self.content_region.x)
+        big = px.render(grid)
         big.append("\n")
         big.append(f"{now:%a %d %b}".upper(), Style(color=px.CYAN, bold=True))
         big.append(f"  :{now:%S}", Style(color=px.HOTPINK))
@@ -242,12 +278,40 @@ class Hud(Static):
             age = int(time.monotonic() - self.synced)
             status.append(f"● SYNCED {age}s AGO", Style(color=px.CYAN))
         status.append("   ⏎ VIEW · 66 PAGE · O BROWSER · R SYNC · S SETTINGS", Style(color=px.DIM))
-        self.update(Text("\n").join([Text(""), line, status]))
+        flakes = _snowfall()
+        if flakes is None or not self.size.width:
+            self.update(Text("\n").join([Text(""), line, status]))
+            return
+        self.update(self._snowy([Text(""), line, status, Text("")], flakes))
+
+    def _snowy(self, lines: list[Text], flakes: dict[tuple[int, int], str]) -> Text:
+        """The counters centred by hand, with snow falling in the blank space around them."""
+        width, x0 = self.size.width, self.content_region.x
+        rows = []
+        for r, line in enumerate(lines[:4]):
+            line.truncate(width)
+            left = (width - line.cell_len) // 2
+            row = Text(no_wrap=True)
+            for side, span in (("l", range(left)), ("r", range(left + line.cell_len, width))):
+                if side == "r":
+                    row.append_text(line)
+                for x in span:
+                    top, bot = flakes.get((x0 + x, 2 * r)), flakes.get((x0 + x, 2 * r + 1))
+                    if top and bot:
+                        row.append("█", Style(color=top))
+                    elif top or bot:
+                        row.append("▀" if top else "▄", Style(color=top or bot))
+                    else:
+                        row.append(" ")
+            rows.append(row)
+        return Text("\n").join(rows)
 
 
 class Divider(Widget):
     def render(self) -> Text:
         w = self.size.width
+        if px.extra("rule") == "lights":
+            return px.lights(w, time.monotonic())
         out = Text(no_wrap=True)
         for x in range(w):
             ch = "▀" if x % 2 == 0 else "▄"
@@ -742,7 +806,9 @@ class SplashScreen(Screen):
         big = px.text_grid("PIXELDECK", shift=self.tick * 0.03)
         big = [[c for c in row for _ in (0, 1)] for row in big for _ in (0, 1)]  # 2x scale
         art = px.render(big)
-        invaders = [px.sprite_grid(px.INVADER[self.tick % 2]), px.sprite_grid(px.GHOST[self.tick % 2])]
+        invaders = ([px.sprite_grid(px.TREE[self.tick % 2]), px.sprite_grid(px.TREE[(self.tick + 1) % 2])]
+                    if px.extra("sprite") == "tree" else
+                    [px.sprite_grid(px.INVADER[self.tick % 2]), px.sprite_grid(px.GHOST[self.tick % 2])])
         row: px.Grid = [[] for _ in range(8)]
         for n in range(5):
             g = invaders[n % 2]
@@ -953,6 +1019,7 @@ class PixelDeck(App):
         self._schedule("agent", 10, self._agent)
         self._schedule("spotify", 2, self._spotify)
         self.set_interval(20, self._write_snapshot)
+        self.set_interval(0.12, self._header_tick)  # snow and twinkling lights, when the theme has them
         self.set_interval(1, self._llm_tick)
         self.set_interval(refresh["system"], self._vitals)
         self._vitals()
@@ -974,6 +1041,25 @@ class PixelDeck(App):
 
     # look ------------------------------------------------------------------------
 
+    def _header_tick(self) -> None:
+        """Move the snow and the lights along (does nothing in a theme without them)."""
+        if not (px.extra("snow") or px.extra("rule")):
+            return
+        dash = self.screen_stack[0] if self.screen_stack else None
+        if dash is None:
+            return
+        if px.extra("snow"):  # the logo moves on its own timer
+            for w in dash.query(Sprite):
+                w.draw()
+            for w in dash.query(Clock):
+                w._draw()
+            for w in dash.query(Hud):
+                w.refresh_hud()
+        if px.extra("rule"):
+            for screen in self.screen_stack:
+                for d in screen.query(Divider):
+                    d.refresh()
+
     def get_theme_variable_defaults(self) -> dict[str, str]:
         """The stylesheets are parsed before our theme is switched on: give $pd-… a value until then."""
         return px.css_vars(px.ACTIVE)
@@ -994,6 +1080,12 @@ class PixelDeck(App):
             hud.refresh_hud()
         for w in (*self.query(Vitals), *self.query(Divider)):
             w.refresh()
+        for w in self.query(Sprite):
+            w.draw()
+        for w in self.query(Clock):
+            w._draw()
+        for w in self.query(Logo):
+            w._draw()
         for screen in self.screen_stack:
             if restyle := getattr(screen, "restyle", None):
                 restyle()

@@ -46,7 +46,7 @@ DEFAULTS: dict[str, Any] = {
     "releases": {"repo": "", "branch": "main", "env": []},
     "profile": {"name": "", "email": ""},  # asked for at first start (profile.py); empty name = not set yet
     # popups: open emails, tickets and PRs in a popup (f makes it full screen); False = full page.
-    # theme: one of pixel.THEMES (arcade, phosphor, amber, ocean, frost, mono, daylight)
+    # theme: one of pixel.THEMES (arcade, phosphor, amber, ocean, frost, mono, christmas, daylight)
     "ui": {"popups": True, "theme": "arcade"},
     "update": {"auto": False, "check_minutes": 15},
     "refresh": {

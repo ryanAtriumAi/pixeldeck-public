@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.4 (2026-11-24)
+
+- **CHRISTMAS theme:** pine, berry red and gold. Snow falls through the whole header (past the tree, the
+  logo, the counters and the clock), the logo is a candy cane with twinkling gold lights, a Christmas tree
+  replaces the invader (also on the title screen), and the rule lines become strings of fairy lights.
+- The header sprite now follows a live theme switch (it kept its old colours until a restart).
+
 ## 0.4.3 (2026-11-24)
 
 - **GitHub page REVIEWED** counts other people's PRs you reviewed, commented on or merged, not only formal

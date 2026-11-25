@@ -58,7 +58,9 @@ brand-new install the connect-your-accounts menu opens next.
 
 Themes: **ARCADE** (the original purple, pink and cyan), **PHOSPHOR** (green CRT), **AMBER**,
 **OCEAN** (navy, teal and coral), **FROST** (soft blue-grey), **MONO** (greyscale) and **DAYLIGHT**
-(light, for bright rooms). Each row in the picker is drawn in that theme's own colours, and moving
+(light, for bright rooms), plus **CHRISTMAS**: pine, berry red and gold, with snow falling through the
+header, a candy-cane logo with twinkling lights, a tree in place of the invader, and fairy lights for
+the rule lines. Each row in the picker is drawn in that theme's own colours, and moving
 through the list tries each one on: the whole dashboard restyles at once, nothing restarts. In the
 profile screen SAVE keeps the one you stopped on and `esc` puts the old one back. Change name, email or
 theme any time in Settings (`s`) → Profile: Enter keeps a theme, moving away without Enter puts the

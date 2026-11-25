@@ -62,6 +62,16 @@ THEMES: dict[str, dict] = {
         "PINK": "#f5f5f5", "HOTPINK": "#ffffff", "YELLOW": "#ffd866", "RED": "#ff6666", "GREEN": "#9aff9a",
         "INK": "#f2f2f2", "DIM": "#808080",
     },
+    "christmas": {
+        "label": "CHRISTMAS", "about": "pine, berry and gold, with snow", "dark": True,
+        # extras: falling snow in the header, a candy-cane logo, a tree for the sprite, fairy lights for rules
+        "snow": True, "logo": "candy", "sprite": "tree", "rule": "lights",
+        "VOID": "#05120c", "DEEP": "#0a1d14", "PANEL": "#10291c", "SHADOW": "#1d3d2b",
+        "SELECT": "#2a5a3e", "FOCUS": "#357050", "FENCE": "#06160e", "INLINE": "#f3e9c6", "INLINE_BG": "#173524",
+        "PURPLE": "#d42a3c", "VIOLET": "#ff7a85", "BLUE": "#2e9b5f", "CYAN": "#9fe6b4",
+        "PINK": "#e0a923", "HOTPINK": "#ffd54a", "YELLOW": "#ffe58a", "RED": "#ff4d4d", "GREEN": "#58d68d",
+        "INK": "#f6f8f4", "DIM": "#7fa38c",
+    },
     "daylight": {
         "label": "DAYLIGHT", "about": "light, for bright rooms", "dark": False,
         "VOID": "#f6f1e7", "DEEP": "#ece5d6", "PANEL": "#e0d7c4", "SHADOW": "#cfc4ac",
@@ -105,8 +115,14 @@ def apply_theme(name: str | None) -> str:
                  "error": RED, "muted": DIM, "green": GREEN})
     GRADIENT[:] = [PURPLE, BLUE, CYAN, HOTPINK, PINK]
     SPRITE_COLORS.clear()
-    SPRITE_COLORS.update({"p": PURPLE, "b": BLUE, "c": CYAN, "k": PINK, "h": HOTPINK, "w": INK, "s": SHADOW})
+    SPRITE_COLORS.update({"p": PURPLE, "b": BLUE, "c": CYAN, "k": PINK, "h": HOTPINK, "w": INK, "s": SHADOW,
+                          "r": RED, "y": YELLOW, "g": GREEN, "n": "#8b5a2b"})
     return ACTIVE
+
+
+def extra(name: str):
+    """A theme's extra (snow, logo, sprite, rule), None when it has none."""
+    return THEMES[ACTIVE].get(name)
 
 
 apply_theme(DEFAULT_THEME)
@@ -171,6 +187,30 @@ INVADER = [
         ".hhhhhhhhh.",
         "..h.....h..",
         ".h.......h.",
+    ],
+]
+
+# a Christmas tree; its lights swap between the two frames and the star twinkles
+TREE = [
+    [
+        ".....y.....",
+        "....grg....",
+        "...gbygb...",
+        "..gbrgbgb..",
+        ".gbgbygbgb.",
+        "gbrgbgbgyrg",
+        "....nnn....",
+        "...ppppp...",
+    ],
+    [
+        ".....w.....",
+        "....gyg....",
+        "...gbrgb...",
+        "..gbygbgb..",
+        ".gbgbrgbgb.",
+        "gbygbgbgryg",
+        "....nnn....",
+        "...ppppp...",
     ],
 ]
 
@@ -254,4 +294,82 @@ def bar(value: float, width: int = 16, stops: list[str] = GRADIENT) -> Text:
             out.append("▰", Style(color=gradient_at(i / max(width - 1, 1), stops)))
         else:
             out.append("▱", Style(color=SHADOW))
+    return out
+
+
+# ── Snow ─────────────────────────────────────────────────────────────────────
+# One field of flakes for the whole header, in half-block pixels (a terminal row is 2 pixels tall), so the
+# snow drifts straight through the sprite, the logo, the counters and the clock. Each widget asks about its
+# own cells by their column on screen.
+
+SNOW_H = 8  # the header is 4 rows: 8 pixels
+_flakes: dict[int, list[tuple[int, float, float, float, int, str]]] = {}
+
+
+def _field(width: int) -> list[tuple[int, float, float, float, int, str]]:
+    if width not in _flakes:
+        import random
+
+        rnd = random.Random(1225)  # the same snow every run, for a given width
+        out = []
+        for x in range(width):
+            for _ in range(2):
+                if rnd.random() < 0.4:
+                    out.append((x, rnd.uniform(0, 20), rnd.uniform(1.6, 3.6), rnd.uniform(0, 6.3),
+                                rnd.randint(2, 8), rnd.choice(["#ffffff", "#dfefff", "#cfe3ff"])))
+        _flakes.clear()  # keep only the current width
+        _flakes[width] = out
+    return _flakes[width]
+
+
+def snow(width: int, t: float) -> dict[tuple[int, int], str]:
+    """{(column, pixel row): colour} of every flake in the header at time t."""
+    import math
+
+    cells: dict[tuple[int, int], str] = {}
+    for x, phase, speed, sway, gap, color in _field(width):
+        y = int((phase + speed * t) % (SNOW_H + gap))
+        if y < SNOW_H:
+            cells[(x + round(math.sin(t * 0.9 + sway) * 0.7), y)] = color
+    return cells
+
+
+def dust(grid: Grid, flakes: dict[tuple[int, int], str], x0: int, y0: int = 0) -> Grid:
+    """Lay flakes on the empty pixels of a grid whose top-left sits at screen column x0, pixel row y0."""
+    for y, row in enumerate(grid):
+        for x, cell in enumerate(row):
+            if cell is None and (c := flakes.get((x0 + x, y0 + y))):
+                row[x] = c
+    return grid
+
+
+def candy(grid: Grid, t: float) -> Grid:
+    """Candy-cane stripes on a logo grid (shadow kept), with a few gold lights twinkling."""
+    for y, row in enumerate(grid):
+        for x, cell in enumerate(row):
+            if cell is None or cell == SHADOW:
+                continue
+            stripe = ((x + y + int(t * 5)) // 2) % 2
+            row[x] = PURPLE if stripe else INK
+            if (x * 7 + y * 13 + int(t * 3) * 5) % 41 == 0:
+                row[x] = HOTPINK
+    return grid
+
+
+BULBS = ["RED", "HOTPINK", "GREEN", "#4aa3ff"]
+
+
+def lights(width: int, t: float) -> Text:
+    """A string of fairy lights: a rule line with bulbs that twinkle."""
+    out = Text(no_wrap=True)
+    step = int(t * 2)
+    for x in range(width):
+        if x % 4 == 2:
+            n = x // 4
+            color = BULBS[n % len(BULBS)]
+            color = globals().get(color, color)
+            lit = (n + step) % 3 != 0
+            out.append("●", Style(color=color if lit else _lerp(color, VOID, 0.6), bgcolor=VOID))
+        else:
+            out.append("─", Style(color=SHADOW, bgcolor=VOID))
     return out
