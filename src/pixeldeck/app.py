@@ -198,8 +198,9 @@ class Logo(Static):
         self._draw()
 
     def _draw(self) -> None:
-        grid = px.text_grid("PIXELDECK", shift=self.shift)
-        if px.extra("logo") == "candy":
+        candy = px.extra("logo") == "candy"
+        grid = px.text_grid("PIXELDECK", shift=self.shift, shadow=not candy)  # no drop shadow under stripes
+        if candy:
             px.candy(grid, time.monotonic())
         if (flakes := _snowfall()) is not None:
             px.dust(grid, flakes, self.content_region.x)

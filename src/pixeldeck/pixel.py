@@ -303,10 +303,10 @@ def bar(value: float, width: int = 16, stops: list[str] = GRADIENT) -> Text:
 # own cells by their column on screen.
 
 SNOW_H = 8  # the header is 4 rows: 8 pixels
-_flakes: dict[int, list[tuple[int, float, float, float, int, str]]] = {}
+_flakes: dict[int, list[tuple[int, float, float, float, int, float]]] = {}
 
 
-def _field(width: int) -> list[tuple[int, float, float, float, int, str]]:
+def _field(width: int) -> list[tuple[int, float, float, float, int, float]]:
     if width not in _flakes:
         import random
 
@@ -315,8 +315,10 @@ def _field(width: int) -> list[tuple[int, float, float, float, int, str]]:
         for x in range(width):
             for _ in range(2):
                 if rnd.random() < 0.4:
-                    out.append((x, rnd.uniform(0, 20), rnd.uniform(1.6, 3.6), rnd.uniform(0, 6.3),
-                                rnd.randint(2, 8), rnd.choice(["#ffffff", "#dfefff", "#cfe3ff"])))
+                    # opacity: each flake is blended into the header's background, so the snow reads as a
+                    # soft veil rather than bright dots (the colour is worked out when drawn: themes change)
+                    out.append((x, rnd.uniform(0, 20), rnd.uniform(1.2, 2.6), rnd.uniform(0, 6.3),
+                                rnd.randint(2, 8), rnd.uniform(0.18, 0.45)))
         _flakes.clear()  # keep only the current width
         _flakes[width] = out
     return _flakes[width]
@@ -327,10 +329,10 @@ def snow(width: int, t: float) -> dict[tuple[int, int], str]:
     import math
 
     cells: dict[tuple[int, int], str] = {}
-    for x, phase, speed, sway, gap, color in _field(width):
+    for x, phase, speed, sway, gap, alpha in _field(width):
         y = int((phase + speed * t) % (SNOW_H + gap))
         if y < SNOW_H:
-            cells[(x + round(math.sin(t * 0.9 + sway) * 0.7), y)] = color
+            cells[(x + round(math.sin(t * 0.9 + sway) * 0.7), y)] = _lerp(DEEP, "#ffffff", alpha)
     return cells
 
 
@@ -344,15 +346,19 @@ def dust(grid: Grid, flakes: dict[tuple[int, int], str], x0: int, y0: int = 0) -
 
 
 def candy(grid: Grid, t: float) -> Grid:
-    """Candy-cane stripes on a logo grid (shadow kept), with a few gold lights twinkling."""
+    """Candy-cane stripes on a logo grid (shadow kept), in soft colours that stay put. A few gold lights
+    glow up and fade away slowly, each on its own beat, so the name never seems to flash."""
+    import math
+
+    red, white = _lerp(PURPLE, DEEP, 0.12), _lerp(INK, DEEP, 0.22)  # softened, still easy to read
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
             if cell is None or cell == SHADOW:
                 continue
-            stripe = ((x + y + int(t * 5)) // 2) % 2
-            row[x] = PURPLE if stripe else INK
-            if (x * 7 + y * 13 + int(t * 3) * 5) % 41 == 0:
-                row[x] = HOTPINK
+            row[x] = red if ((x + y) // 3) % 2 else white  # broad bands: thin ones look like static
+            if (x * 7 + y * 13) % 29 == 0:  # a light: fades in and out over about six seconds
+                glow = (math.sin(t * 1.0 + x * 0.9 + y * 1.7) + 1) / 2
+                row[x] = _lerp(row[x], HOTPINK, glow * 0.55)
     return grid
 
 

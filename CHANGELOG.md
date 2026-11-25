@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.5 (2026-11-24)
+
+- **Calmer CHRISTMAS header:** the candy-cane logo no longer scrolls its stripes (it read as flashing); the
+  stripes are broad, softened and still, and the gold lights in it fade in and out slowly. Snowflakes are
+  blended into the background (each one more or less see-through) and fall a little slower.
+
 ## 0.4.4 (2026-11-24)
 
 - **CHRISTMAS theme:** pine, berry red and gold. Snow falls through the whole header (past the tree, the
