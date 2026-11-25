@@ -107,8 +107,10 @@ What each page is for:
 - **GITHUB (`11`, `22`, `33`: it opens on the card for the tile you came from).** REVIEWS lists the
   PRs waiting on you, longest wait first. MY PRS puts the ones that need you first (CI failing, a
   conflict, changes requested), then approved, waiting and drafts. INBOX groups notifications into
-  for you, participating and watching; `e` marks the highlighted one read on GitHub. OPENED, MERGED
-  and REVIEWED count your PRs over 7, 30 or 90 days (`t`). The panel charts the health of your open
+  for you, participating and watching; `e` marks the highlighted one read on GitHub. OPENED and MERGED
+  count your PRs over 7, 30 or 90 days (`t`). REVIEWED counts other people's PRs you reviewed,
+  commented on or merged (GitHub's own `reviewed-by:` only sees formal reviews, which misses most of it);
+  each row says which. The panel charts the health of your open
   PRs, how long reviews have waited, the inbox by reason, and opened against merged for eight weeks.
 - **RELEASES (`44`).** A card per environment shows the build it runs, whether it is up, and how long
   it has been live; its list is that environment's health and deploy history. LATEST says where the

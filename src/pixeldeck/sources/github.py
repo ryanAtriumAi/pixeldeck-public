@@ -205,7 +205,6 @@ class GitHub:
         kinds = {  # card → (search, sort, the field that dates a row)
             "opened": ("is:pr author:@me created:{}", "created-desc", "createdAt"),
             "merged": ("is:pr author:@me is:merged merged:{}", "updated-desc", "mergedAt"),
-            "reviewed": ("is:pr reviewed-by:@me -author:@me updated:{}", "updated-desc", "updatedAt"),
         }
 
         def count(alias: str, q: str) -> str:
@@ -216,17 +215,17 @@ class GitHub:
             parts = [f'rows: search(query: "{q.format(">=" + since[longest])} sort:{order}", type: ISSUE, '
                      "first: 100) { issueCount nodes { ...donePr } }"]
             parts += [count(f"d{d}", q.format(">=" + since[d])) for d in periods if d != longest]
-            if kind != "reviewed":  # exact weekly counts, so a busy quarter past 100 rows still charts right
-                for w in range(weeks):  # w0 is the last 7 days
-                    end = now - timedelta(days=7 * w, seconds=1)
-                    span = f"{_stamp(now - timedelta(days=7 * (w + 1)))}..{_stamp(end)}"
-                    parts.append(count(f"w{w}", q.format(span)))
+            for w in range(weeks):  # exact weekly counts (w0 is the last 7 days), so a busy quarter charts right
+                end = now - timedelta(days=7 * w, seconds=1)
+                span = f"{_stamp(now - timedelta(days=7 * (w + 1)))}..{_stamp(end)}"
+                parts.append(count(f"w{w}", q.format(span)))
             return "query {\n  " + "\n  ".join(parts) + "\n}\n" + DONE_FRAGMENT
 
         async def call(q: str) -> dict:
             return (await run_json("gh", "api", "graphql", "-f", f"query={q}", timeout=45))["data"]
 
-        data, *done = await asyncio.gather(call(OVERVIEW_QUERY), *(call(query(k)) for k in kinds))
+        data, reviewed, *done = await asyncio.gather(call(OVERVIEW_QUERY), self.reviewed(longest),
+                                                     *(call(query(k)) for k in kinds))
         self.login = login = data["viewer"]["login"]
 
         queue = []
@@ -243,7 +242,59 @@ class GitHub:
             out[kind] = {"nodes": nodes, "count": counts, "field": field}
             if "w0" in d:
                 out["weekly"][kind] = [d[f"w{w}"]["issueCount"] for w in reversed(range(weeks))]
+        stamps = [parse_time(n["updatedAt"]) for n in reviewed]
+        out["reviewed"] = {"nodes": reviewed, "field": "updatedAt",
+                           "count": {p: sum(1 for t in stamps if t and t >= now - timedelta(days=p)) for p in periods}}
+        out["weekly"]["reviewed"] = [sum(1 for t in stamps if t and now - timedelta(days=7 * (w + 1)) <= t
+                                         < now - timedelta(days=7 * w)) for w in reversed(range(weeks))]
         return out
+
+    async def _me(self) -> str:
+        if not self.login:
+            self.login = (await run_cmd("gh", "api", "user", "--jq", ".login")).strip()
+        return self.login
+
+    async def reviewed(self, days: int = 90) -> list[dict]:
+        """Other people's PRs you reviewed, commented on or merged, updated in the last `days`, newest first.
+        `reviewed-by:` alone misses most of it: it only counts formal reviews, and a lot of reviewing ends in a
+        comment or a merge. GitHub search can't ask who merged, so this lists the PRs you're involved in and
+        checks each one. Searches return at most 100 rows, so it asks week by week (all at once), splitting
+        any stretch with more. Each PR gets `how`: the things you did, e.g. ["merged", "commented"]."""
+        _check()
+        me = await self._me()
+        now = datetime.now(timezone.utc)
+
+        async def span(lo: datetime, hi: datetime) -> list[dict]:
+            r = f"{_stamp(lo)}..{_stamp(hi - timedelta(seconds=1))}"
+            q = ("query {\n"
+                 f'  all: search(query: "is:pr involves:@me -author:@me updated:{r}", type: ISSUE, first: 100) {{\n'
+                 "    issueCount nodes { ...donePr ... on PullRequest { mergedBy { login } "
+                 f'reviews(author: "{me}", first: 1) {{ totalCount }} }} }} }}\n'
+                 f'  said: search(query: "is:pr commenter:@me -author:@me updated:{r}", type: ISSUE, first: 100) {{\n'
+                 "    nodes { ... on PullRequest { url } } }\n}\n" + DONE_FRAGMENT)
+            d = (await run_json("gh", "api", "graphql", "-f", f"query={q}", timeout=45))["data"]
+            if d["all"]["issueCount"] > 100 and hi - lo > timedelta(hours=6):
+                mid = lo + (hi - lo) / 2  # too many for one page: ask for each half
+                a, b = await asyncio.gather(span(lo, mid), span(mid, hi))
+                return a + b
+            said = {n["url"] for n in d["said"]["nodes"] if n and n.get("url")}
+            out = []
+            for n in d["all"]["nodes"]:
+                if not n or not n.get("url"):
+                    continue
+                how = [verb for verb, yes in (("merged", (n.get("mergedBy") or {}).get("login") == me),
+                                              ("reviewed", (n.get("reviews") or {}).get("totalCount")),
+                                              ("commented", n["url"] in said)) if yes]
+                if how:  # involves:@me also matches PRs you were only asked to review or mentioned in
+                    out.append({**n, "how": how})
+            return out
+
+        edges = [now - timedelta(days=min(7 * w, days)) for w in range(-(-days // 7) + 1)]
+        parts = await asyncio.gather(*(span(lo, hi) for hi, lo in zip(edges, edges[1:])))
+        seen: dict[str, dict] = {}
+        for n in (n for part in parts for n in part):
+            seen.setdefault(n["url"], n)
+        return sorted(seen.values(), key=lambda n: n["updatedAt"], reverse=True)
 
     async def mark_read(self, thread: str) -> None:
         """Marks one notification thread read on GitHub."""

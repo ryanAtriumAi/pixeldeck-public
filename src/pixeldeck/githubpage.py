@@ -163,7 +163,7 @@ class GitHubPage(SectionScreen):
         c.hint = f"{len(groups['attention'])} need you · {len(groups['approved'])} approved"
 
         since = self._since()
-        for key, verb in (("opened", "opened"), ("merged", "merged"), ("reviewed", "updated")):
+        for key, verb in (("opened", "opened"), ("merged", "merged"), ("reviewed", "you")):
             k = d[key]
             nodes = [n for n in k["nodes"] if _ts(n.get(k["field"])) >= since]
             nodes.sort(key=lambda n: n.get(k["field"]) or "", reverse=True)
@@ -171,12 +171,16 @@ class GitHubPage(SectionScreen):
             c = by[key]
             c.value = str(total)
             c.rows = [Group(f"LATEST {len(nodes)} OF {total}")] if total > len(nodes) else []
-            c.rows += [self._done_row(n, f"{verb} {ago(parse_time(n.get(k['field'])))}", key == "reviewed")
+            c.rows += [self._done_row(n, (f"you {' + '.join(n.get('how') or ['reviewed'])} · " if key == "reviewed"
+                                          else f"{verb} ") + ago(parse_time(n.get(k["field"]))), key == "reviewed")
                        for n in nodes]
             if key == "merged" and (spans := self._merge_times(nodes)):
                 c.hint = f"median {_span(statistics.median(spans))} to merge"
             else:
                 c.hint = {"opened": "by you", "merged": "yours", "reviewed": "others' PRs"}[key] + f" · {self.days}d"
+            if key == "reviewed" and nodes:
+                did = {v: sum(1 for n in nodes if v in (n.get("how") or [])) for v in ("merged", "reviewed", "commented")}
+                c.hint = f"{did['merged']} merged · {did['commented']} commented"  # the period is in the header
         return cards
 
     def _queue_row(self, pr: dict) -> Item:
@@ -276,11 +280,18 @@ class GitHubPage(SectionScreen):
                 out.append_text(spark("opened", weekly["opened"], px.VIOLET, top))
             if "merged" in weekly:
                 out.append_text(spark("merged", weekly["merged"], px.GREEN, top))
+            if "reviewed" in weekly:
+                out.append_text(spark("reviewed", weekly["reviewed"], px.CYAN, top))
         since = self._since()
         merged = [n for n in d["merged"]["nodes"] if _ts(n.get("mergedAt")) >= since]
         if spans := self._merge_times(merged):
             out.append_text(kv("time to merge", f"median {_span(statistics.median(spans))} · {self.days}d"))
-        out.append_text(kv("reviewed", f"{d['reviewed']['count'].get(self.days, 0)} others' PRs · {self.days}d"))
+        rev = [n for n in d["reviewed"]["nodes"] if _ts(n.get("updatedAt")) >= since]
+        did = {v: sum(1 for n in rev if v in (n.get("how") or [])) for v in ("merged", "reviewed", "commented")}
+        out.append_text(kv("reviewed", f"{len(rev)} others' PRs · {self.days}d"))
+        out.append_text(kv("  merged", str(did["merged"])))
+        out.append_text(kv("  commented", str(did["commented"])))
+        out.append_text(kv("  formal review", str(did["reviewed"])))
         return out
 
     # actions ----------------------------------------------------------------------

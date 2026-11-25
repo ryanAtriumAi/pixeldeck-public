@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 (2026-11-24)
+
+- **GitHub page REVIEWED** counts other people's PRs you reviewed, commented on or merged, not only formal
+  reviews (GitHub's `reviewed-by:` search), which undercounted badly when reviewing ends in a comment or a merge.
+  Each row says what you did; the panel splits the total and charts it per week.
+
 ## 0.4.2 (2026-11-24)
 
 - **Live themes:** moving through the theme list (profile screen or Settings → Profile) restyles the
